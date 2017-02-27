@@ -22,7 +22,7 @@ for file in arguments.i:
 	print ' *****analyzing '+str(file)+' *****'
 	vf.blast_vsg(file,l)
 	vf.blast_nonvsg(file,l)
-	Vfile = file.split('.')[0]+'.xml'
+	Vfile = file.split('.')[0]+'.xml' # where are these files created?
 	Nfile = file.split('.')[0]+'_nonVSG.xml'
 	vf.blast_sort(Vfile,Nfile,file)
 	newfile = file.split('.')[0]+'_VSGs.fa'
