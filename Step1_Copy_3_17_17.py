@@ -52,7 +52,7 @@ for record in record_dict: # iterates through the sequences
 				trans_len = len(trans) # gets length of the protein sequence
 				seq_len = len(record_dict[record].seq) # gets the length of the nucleotide sequence from the fasta file 
 				aa_start = 0
-				max_aa_start = trans_len - min_pro_len
+				max_aa_start = trans_len #- min_pro_len
 				while aa_start < max_aa_start: # while the starting amino acid is less than the peptide sequence length
 					trans_start = trans.find("M", aa_start) # finds index of start aa sequence
 					trans_end = trans.find("*", trans_start) # finds index of end aa sequence which comes after the start aa seq
@@ -97,14 +97,12 @@ for record in record_dict: # iterates through the sequences
 								sequence = record_dict[record].seq[start:end].reverse_complement()
 								ORF_seq = SeqRecord(sequence, id=record_dict[record].id+'_RC_'+str(start)+'_'+str(end))
 								orf_dict[record_dict[record].id].append((sequence,start,end,False))
-								
+
 							aa_start = trans_len
 					elif orf_len > min_pro_len: # if we have both a start and an end and its long enough
-						#print str(trans_start)+'\t'+str(trans_end)
 						if strand ==1:
 							#print'5!!!'
 							start = frame+trans_start*3
-							end = min(seq_len, frame+trans_end*3+3)
 							end = frame+trans_end*3+3
 							sequence = record_dict[record].seq[start:end]
 							ORF_seq = SeqRecord(sequence, id=str(record_dict[record].id)+'_'+str(start)+'_'+str(end))
@@ -112,15 +110,13 @@ for record in record_dict: # iterates through the sequences
 							
 						if strand ==-1:
 							start = max(0, seq_len-frame-trans_end*3-3)
-							#print start
 							end = seq_len-frame-trans_start*3
 							sequence = record_dict[record].seq[start:end].reverse_complement()
-							#print record_dict[record].seq[start:end].reverse_complement().translate()
 							ORF_seq = SeqRecord(sequence, id=record_dict[record].id+'_RC_'+str(start)+'_'+str(end))
 							orf_dict[record_dict[record].id].append((sequence,start,end,False))
 						aa_start = trans_len
-					else:
-						aa_start = trans_len
+					else: # orf is too short AKA orf_len < min_pro_len
+						aa_start = trans_len #set the new start to the end of the too short protein, to find the next!
 #print orf_dict
 for key in orf_dict.iterkeys(): #keys are contig names '>______'
 	count=1 # keep track which ORF is in what contig bcause contigs may contain more than one
@@ -131,7 +127,7 @@ for key in orf_dict.iterkeys(): #keys are contig names '>______'
 			# 
 		if item[3] == False:
 			ORF_seq = SeqRecord(item[0], id=key+'_'+str(count)+'_'+str(item[1])+'_'+str(item[2])+'_RC') # RC = reverse complement indication
-		print str(ORF_seq.seq)
+		#print str(ORF_seq.seq)
 		ORF_outfile.write('>'+str(ORF_seq.id)+'\n'+str(ORF_seq.seq)+'\n')
 		#SeqIO.write(ORF_seq, ORF_outfile, "fasta")
 		count = count + 1
