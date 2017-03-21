@@ -27,13 +27,26 @@ def fixSeqRecord(file): # gets rid of not usefull stuff in the file comment ">" 
 	outfile.close()
 	infile.close()
 
+def addSeqRecord(recordRD, start, end, count):
+	sequence = recordRD.seq[start:end]
+	ORF_outfile.write('>'+str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+'\n'+str(sequence)+'\n')
+	SeqIO.write(SeqRecord(sequence.translate(), id=str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)), trans_out_file, "fasta")
+def addSeqRecordRC(recordRD, start, end, count):
+	sequence = recordRD.seq[start:end].reverse_complement()
+	ORF_outfile.write('>'+str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+'_RC'+'\n'+str(sequence)+'\n')
+	SeqIO.write(SeqRecord(sequence.translate(), id=str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+'_RC'), trans_out_file, "fasta")
+
+
 record_dict = SeqIO.index(argv[1],"fasta") # "parses" a fasta file, creating a dictionary-like object of sequences. not everything is kept in memeory. instead it just records where each record is within the file. parses on demand. 
 # the key is the dictionary is the ">" line in the fasta file
 min_pro_len = int(argv[2]) # minimum protein length, within typical VSG protein length, in a.a.
 
 contig_outfile = open(argv[3], 'w') # initializing contig output file, reference
 
+global ORF_outfile
 ORF_outfile = open(argv[4], 'w') # initializing open reading frame output file, what we like
+global trans_out_file
+trans_out_file = open(argv[4].split('.')[0]+'_trans.fa', 'w')
 
 for record in record_dict: # iterates through the sequences
 	#print record_dict[record]
@@ -57,55 +70,30 @@ for record in record_dict: # iterates through the sequences
 						if trans_end > min_pro_len: #if length from aa_start to the stop codon found is > min length
 							# will treat the entire thing as an open reading frame, since there is a stop codon but the start codon isn't to be found... yet in the current frame
 							if strand==1: # adds to dictionary for ORFs of 1 strands
-								end = min(seq_len, frame+trans_end*3+3) 
-								sequence = record_dict[record].seq[0:end]
-								ORF_outfile.write('>'+str(record_dict[record].id)+'_'+str(count)+'_'+str(0)+'_'+str(end)+'\n'+str(sequence)+'\n')
+								addSeqRecord(record_dict[record], 0, min(seq_len, frame+trans_end*3+3), count)
 							else: # adds to dictionary for ORFs of -1 strands
-								start = max(0, seq_len-frame-(trans_end*3)-3)
-								sequence = record_dict[record].seq[start:seq_len].reverse_complement()
-								ORF_outfile.write('>'+str(record_dict[record].id)+'_'+str(count)+'_'+str(start)+'_'+str(seq_len)+'_RC'+'\n'+str(sequence)+'\n')
+								addSeqRecordRC(record_dict[record], max(0, seq_len-frame-(trans_end*3)-3), seq_len, count)
 							count += 1
 				elif trans_end == -1: #if a start is found but no end is found
 					if trans_len-trans_start > min_pro_len: #if ORF from found start to end sequence is long enough
 						if strand ==1:
-							start = frame+trans_start*3
-							sequence = record_dict[record].seq[start:seq_len]
-							ORF_outfile.write('>'+str(record_dict[record].id)+'_'+str(count)+'_'+str(start)+'_'+str(seq_len)+'\n'+str(sequence)+'\n')
+							addSeqRecord(record_dict[record], frame+trans_start*3, seq_len, count)
 						else:
-							end = seq_len-frame-trans_start*3
-							sequence = record_dict[record].seq[0:end].reverse_complement()
-							ORF_outfile.write('>'+str(record_dict[record].id)+'_'+str(count)+'_'+str(0)+'_'+str(end)+'_RC'+'\n'+str(sequence)+'\n')
+							addSeqRecordRC(record_dict[record], 0, seq_len-frame-trans_start*3, count)
 						count += 1
 
 				elif trans_end-trans_start > min_pro_len: # if we have both a start and an end and its long enough
+					
 					if strand ==1:
-						start = frame+trans_start*3
-						end = frame+trans_end*3+3
-						sequence = record_dict[record].seq[start:end]
-						ORF_outfile.write('>'+str(record_dict[record].id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+'\n'+str(sequence)+'\n')
+						addSeqRecord(record_dict[record], frame+trans_start*3, frame+trans_end*3+3, count)
 					else:
-						start = max(0, seq_len-frame-trans_end*3-3)
-						end = seq_len-frame-trans_start*3
-						sequence = record_dict[record].seq[start:end].reverse_complement()
-						ORF_outfile.write('>'+str(record_dict[record].id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+'_RC'+'\n'+str(sequence)+'\n')
+						addSeqRecordRC(record_dict[record], max(0, seq_len-frame-trans_end*3-3), seq_len-frame-trans_start*3, count)
 					count += 1
 
 		if count > 1: # have any new orf been added? if so, add this record to file
 			SeqIO.write(record_dict[record], contig_outfile, "fasta") 
 
 ORF_outfile.close()
-
 fixSeqRecord(argv[4])
-
-trans_out_file = open(argv[4].split('.')[0]+'_trans.fa', 'w')
-
-record_dict2 = SeqIO.index(argv[4],"fasta")
-
-for record in record_dict2:
-	trans_seq = record_dict2[record].seq.translate()
-	trans_rec = SeqRecord(trans_seq, id= record_dict2[record].id)
-	SeqIO.write(trans_rec, trans_out_file, "fasta")
-
 trans_out_file.close()
-
 fixSeqRecord(argv[4].split('.')[0]+'_trans.fa')
