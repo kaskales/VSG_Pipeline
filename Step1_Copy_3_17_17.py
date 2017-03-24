@@ -132,7 +132,7 @@ for record in record_dict: # iterates through the sequences
 				trans_max = trans_len - min_pro_len # farthest a codon can be before it's below min protein length
 
 				while trans_start < trans_max:
-					if trans_start == -1: # if no more starts are found
+					if trans_start == -1: # if no more starts are found, doesn't matter if there is a stop or not, game over
 						trans_start = trans_len
 					elif trans_end == -1: #if start is found but no end is found
 						if trans_len-trans_start > min_pro_len: #if ORF from found start to end sequence is long enough
