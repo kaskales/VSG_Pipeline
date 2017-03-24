@@ -36,7 +36,6 @@ def addSeqRecord_RC(recordRD, start, end, count):
 	ORF_outfile.write('>'+str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+'_RC'+'\n'+str(sequence)+'\n')
 	SeqIO.write(SeqRecord(sequence.translate(), id=str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+'_RC'), trans_out_file, "fasta")
 
-
 record_dict = SeqIO.index(argv[1],"fasta") # "parses" a fasta file, creating a dictionary-like object of sequences. not everything is kept in memeory. instead it just records where each record is within the file. parses on demand. 
 # the key is the dictionary is the ">" line in the fasta file
 min_pro_len = int(argv[2]) # minimum protein length, within typical VSG protein length, in a.a.
@@ -59,8 +58,7 @@ for record in record_dict: # iterates through the sequences
 				# find a way for it to stop at first stop codon
 
 				trans_len = len(trans) # gets length of the protein sequence
-				seq_len = len(record_dict[record].seq) # gets the length of the nucleotide sequence from the fasta file 
-				
+				seq_len = len(record_dict[record].seq) # gets the length of the nucleotide sequence from the fasta file 		
 				
 				trans_end = trans.find("*", 0)
 				trans_start = trans.find("M", 0)
@@ -114,27 +112,18 @@ for record in record_dict: # iterates through the sequences
 
 				while trans_start < trans_max:
 					if trans_start == -1: # if no more starts are found
-						if trans_end != -1: # if an ends is found
-							if trans_end > min_pro_len: #if length from aa_start to the stop codon found is > min length
-								# will treat the entire thing as an open reading frame, since there is a stop codon but the start codon isn't to be found... yet in the current frame
-								print "F"
-								if strand==1: # adds to dictionary for ORFs of 1 strands
-									addSeqRecord(record_dict[record], frame, min(seq_len, frame+(trans_end*3)+3), count)
-								else: # adds to dictionary for ORFs of -1 strands
-									addSeqRecord_RC(record_dict[record], max(frame, seq_len-frame-(trans_end*3)-3), seq_len, count)
-								count += 1
+						# doesn't matter if an end is found or not anymore
+						# since there are no more start codons there isn't the possibility of another ORF, after the initial find
 						trans_start = trans_len
 					elif trans_end == -1: #if a start is found but no end is found
-						if trans_len-trans_start > min_pro_len: #if ORF from found start to end sequence is long enough
-							print "G"
+						if trans_len-trans_start > min_pro_len: #if ORF from found start to end of sequence, and is long enough				
 							if strand ==1:
 								addSeqRecord(record_dict[record], frame+(trans_start*3), seq_len, count)
 							else:
 								addSeqRecord_RC(record_dict[record], frame, seq_len-frame-(trans_start*3), count)
 							count += 1
-						trans_start = trans_len
-					elif trans_end-trans_start > min_pro_len: # if we have both a start and an end and its long enough
-						print "H"
+						trans_start = trans_len # since we took the rest of the seq, there is no more to search
+					elif trans_end-trans_start > min_pro_len: # if we have both a start and an end, and its long enough
 						if strand ==1:
 							addSeqRecord(record_dict[record], frame+trans_start*3, frame+(trans_end*3)+3, count)
 						else:
@@ -143,10 +132,9 @@ for record in record_dict: # iterates through the sequences
 
 						trans_start = trans.find("M", trans_end) # finds index of start aa sequence
 						trans_end = trans.find("*", trans_start)
-					else:
+					else: # start and end codon exist, but the protein wasn't long enough
 						trans_start = trans.find("M", trans_end) 
 						trans_end = trans.find("*", trans_start)
-				
 
 		if count > 1: # have any new orf been added? if so, add this record to file
 			SeqIO.write(record_dict[record], contig_outfile, "fasta") 
@@ -155,28 +143,4 @@ for record in record_dict: # iterates through the sequences
 ORF_outfile.close()
 fixSeqRecord(argv[4])
 trans_out_file.close()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 fixSeqRecord(argv[4].split('.')[0]+'_trans.fa')
