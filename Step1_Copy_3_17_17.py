@@ -70,7 +70,7 @@ for record in record_dict: # iterates through the sequences
 						if trans_start < trans_end: # there is a start codon before the 1st stop codon
 							if trans_end - trans_start > min_pro_len: # check if this protein is long enought to be considered
 								if strand ==1:
-									addSeqRecord(record_dict[record], frame+trans_start*3, frame+(trans_end*3)+3, count)
+									addSeqRecord(record_dict[record], frame+(trans_start*3), frame+(trans_end*3)+3, count)
 								else:
 									addSeqRecord_RC(record_dict[record], max(frame, seq_len-frame-(trans_end*3)-3), seq_len-frame-(trans_start*3), count)
 								count += 1
@@ -78,60 +78,46 @@ for record in record_dict: # iterates through the sequences
 								if strand ==1:
 									addSeqRecord(record_dict[record], frame, frame+(trans_end*3)+3, count)
 								else:
-									addSeqRecord_RC(record_dict[record], max(frame, seq_len-frame-(trans_end*3)-3), seq_len-frame-(trans_start*3), count)
+									addSeqRecord_RC(record_dict[record], max(frame, seq_len-frame-(trans_end*3)-3), seq_len, count)
 								count += 1
+							# if neither protein is long enough,or even if it was, we will move on to find where the next start codon is, and find the end codon for that one
 							trans_start = trans.find("M", trans_end)
-							trans_end = trans.find("*", trans_start)
+							trans_end = trans.find("*", trans_start)		
 						else: # there is a start codon AFTER the first appearing stop codon
-							if trans_end > min_pro_len: # is the cut orf long enough for the min protein?
+							if trans_end > min_pro_len: # is the seq_start to end codon is long enough for the a min length protein
 								if strand ==1:
 									addSeqRecord(record_dict[record], frame, frame+(trans_end*3)+3, count)
 								else:
 									addSeqRecord_RC(record_dict[record], max(frame, seq_len-frame-(trans_end*3)-3), seq_len-frame-(trans_start*3), count)
 								count += 1
-							trans_end = trans.find("*", trans_start) # will start checking the orf at that first start codon	
+							trans_end = trans.find("*", trans_start) # will start checking the orf at that first found start codon, sets new trans_end to stop codon after the start	
 					else: # start codon exists, but there is no stop codon anywhere! :O
-						if trans_len-trans_start > min_pro_len:
+						if trans_len-trans_start > min_pro_len: # is the remaining protein segment after the start codon long enought to be a protein?
 							if strand ==1:
 								addSeqRecord(record_dict[record], frame+(trans_start*3), seq_len, count)
 							else:
 								addSeqRecord_RC(record_dict[record], frame, seq_len-frame-(trans_start*3), count)
 							count += 1
-						trans_start = trans_len # won't go into loop, bc the entire rest of the sequence just got taken as an orf, so there is no point	
+						trans_start = trans_len # won't go into loop, bc the entire rest of the sequence just got taken as an orf, so there is no point	in searching further, no more to search
 				elif trans_end != -1: # start codon doesn't exist, but end codon does
-					if trans_end > trans_len:
+					if trans_end > trans_len: # take entire sequence from start of seq to the found end codon as ORF if longer than min length
 						if strand ==1:
 							addSeqRecord(record_dict[record], frame, frame+(trans_end*3)+3, count)
 						else:
 							addSeqRecord_RC(record_dict[record], max(frame, seq_len-frame-(trans_end*3)-3), seq_len-frame-(trans_start*3), count)
 						count += 1	
 					trans_start = trans_len # won't search for more, since there aren't any start codons anywhere
-				else: # there are no start or stop codons?!
-					trans_start = trans_len			
+				else: # there are no start or stop codons anywhere?!
+					trans_start = trans_len			# stop it from searching for more
+				
+				trans_max = trans_len - min_pro_len # farthest a codon can be before it's below min protein length
 
-
-
-
-
-
-
-				#if trans_end > min_pro_len and (trans_start == -1 or trans_start > trans_end ):
-				#	if strand==1: # adds to dictionary for ORFs of 1 strands
-				#		addSeqRecord(record_dict[record], frame, min(seq_len, frame+(trans_end*3)+3), count)
-				#	else: # adds to dictionary for ORFs of -1 strands
-				#		addSeqRecord_RC(record_dict[record], max(frame, seq_len-frame-(trans_end*3)-3), seq_len, count)
-				#	count += 1
-
-				#trans_start = trans.find("M", 0) # finds index of start aa sequence
-				#trans_end = trans.find("*", trans_start) # finds index of end aa sequence which comes after the start aa seq
-				trans_max = trans_len - min_pro_len
 				while trans_start < trans_max:
-					#print frame
-					if trans_start == -1: # if no start is found
-						trans_end = trans.find("*", 0) # find the end anyway between aa_start and end of seq
-						if trans_end != -1: # if end is found
+					if trans_start == -1: # if no more starts are found
+						if trans_end != -1: # if an ends is found
 							if trans_end > min_pro_len: #if length from aa_start to the stop codon found is > min length
 								# will treat the entire thing as an open reading frame, since there is a stop codon but the start codon isn't to be found... yet in the current frame
+								print "F"
 								if strand==1: # adds to dictionary for ORFs of 1 strands
 									addSeqRecord(record_dict[record], frame, min(seq_len, frame+(trans_end*3)+3), count)
 								else: # adds to dictionary for ORFs of -1 strands
@@ -140,6 +126,7 @@ for record in record_dict: # iterates through the sequences
 						trans_start = trans_len
 					elif trans_end == -1: #if a start is found but no end is found
 						if trans_len-trans_start > min_pro_len: #if ORF from found start to end sequence is long enough
+							print "G"
 							if strand ==1:
 								addSeqRecord(record_dict[record], frame+(trans_start*3), seq_len, count)
 							else:
@@ -147,6 +134,7 @@ for record in record_dict: # iterates through the sequences
 							count += 1
 						trans_start = trans_len
 					elif trans_end-trans_start > min_pro_len: # if we have both a start and an end and its long enough
+						print "H"
 						if strand ==1:
 							addSeqRecord(record_dict[record], frame+trans_start*3, frame+(trans_end*3)+3, count)
 						else:
@@ -158,11 +146,12 @@ for record in record_dict: # iterates through the sequences
 					else:
 						trans_start = trans.find("M", trans_end) 
 						trans_end = trans.find("*", trans_start)
+				
 
 		if count > 1: # have any new orf been added? if so, add this record to file
 			SeqIO.write(record_dict[record], contig_outfile, "fasta") 
 			numkeys +=1
-print numkeys
+
 ORF_outfile.close()
 fixSeqRecord(argv[4])
 trans_out_file.close()
