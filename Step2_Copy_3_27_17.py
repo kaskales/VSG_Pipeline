@@ -33,7 +33,7 @@ def blast_sort(v,n,s):
     		for hsp in alignment.hsps: 
     			percent_identity = (100.0 * hsp.identities) / alignment.length
     			percent_query_identity = (100.0 * hsp.identities) / blast_record_nonVSG.query_letters
-    			print blast_record_nonVSG.query+'\t'+alignment.title+'\t'+str(percent_identity)+'\t'+str(percent_query_identity)+'\t'
+    			#print blast_record_nonVSG.query+'\t'+alignment.title+'\t'+str(percent_identity)+'\t'+str(percent_query_identity)+'\t'
     			if percent_query_identity > 30 and hsp.identities > 300:
     				if not blast_record_nonVSG.query in exclude_list:
     					exclude_list.append(str(blast_record_nonVSG.query))

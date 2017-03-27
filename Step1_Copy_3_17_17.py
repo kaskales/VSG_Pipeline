@@ -103,7 +103,6 @@ for record in record_dict: # iterates through the sequences
 						else:
 							addSeqRecord_RC(record_dict[record], 0, seq_len, count)
 						count += 1
-
 					# this part isn't generous and only takes from the start codon till the end of the sequence
 #						if trans_len-trans_start > min_pro_len: # is the remaining protein segment after the start codon long enought to be a protein?
 #							print "D"
@@ -128,6 +127,7 @@ for record in record_dict: # iterates through the sequences
 						addSeqRecord(record_dict[record], 0, seq_len, count)
 					else:
 						addSeqRecord_RC(record_dict[record], 0, seq_len, count)
+					trans_start = trans_len
 				
 				trans_max = trans_len - min_pro_len # farthest a codon can be before it's below min protein length
 
@@ -158,8 +158,7 @@ for record in record_dict: # iterates through the sequences
 						#print trans_end	
 					else:
 						trans_start = trans.find("M", trans_end) 
-						trans_end = trans.find("*", trans_start)
-				
+						trans_end = trans.find("*", trans_start)			
 
 		if count > 1: # have any new orf been added? if so, add this record to file
 			SeqIO.write(record_dict[record], contig_outfile, "fasta") 
@@ -168,28 +167,13 @@ for record in record_dict: # iterates through the sequences
 ORF_outfile.close()
 fixSeqRecord(argv[4])
 trans_out_file.close()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 fixSeqRecord(argv[4].split('.')[0]+'_trans.fa')
+
+
+
+
+
+
+
+
+
