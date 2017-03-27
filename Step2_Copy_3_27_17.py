@@ -1,8 +1,6 @@
 import argparse
 import subprocess
-import vsgfindfunctions as vf
 from Bio import SeqIO 
-from sys import argv
 from sys import argv
 from Bio import Seq
 from Bio.Alphabet import IUPAC
@@ -76,19 +74,12 @@ l=arguments.l
 
 for file in arguments.i:
 	print ' *****analyzing '+str(file)+' *****'
-#	vf.blast_vsg(file,l)
-#	vf.blast_nonvsg(file,l)
-#	Vfile = file.split('.')[0]+'.xml' # where are these files created?
-#	Nfile = file.split('.')[0]+'_nonVSG.xml'
-#	vf.blast_sort(Vfile,Nfile,file)
-#	newfile = file.split('.')[0]+'_VSGs.fa'
-#	vf.cdhitmerge(newfile)
 	filename = str(file).split('.')[0]
 	#blast VSG
 	subprocess.call(['blastn -db tb427_vsgs -query '+str(filename)+'.fa -outfmt 5 -out '+str(filename)+'.xml'], shell=True)
 	#blast nonVSG
 	subprocess.call(['blastn -db NOTvsgs -query '+str(filename)+'.fa -outfmt 5 -out '+str(filename)+'_nonVSG.xml'], shell=True)
-	#
+	#get all the blast results which are for ONLY VSGs, get rid of hits which are VSG-similar but not vsgs
 	blast_sort(file.split('.')[0]+'.xml', file.split('.')[0]+'_nonVSG.xml',file)
 	# cdhit merge
 	subprocess.call(['cd-hit-est -i '+filename+'_VSGs.fa '+' -d 0 -o '+filename+'_merged.fa -c 0.9 -n 8 -r 1 -G 1 -g 1 -b 20 -s 0.0 -aL 0.0 -aS 0.5'], shell=True)
