@@ -56,15 +56,8 @@ def blast_sort(v,n,s):
 	    					hit_list.append(str(blast_record.query))
 	    					percent_query_aligned = (100.0 * hsp.identities) / blast_record.query_letters
 	    					percent_identity = (100.0 * hsp.identities) / alignment.length
-	    					print str(blast_record.query)+'\t'+str(alignment.title)+'\t'+str(percent_query_aligned)+'\t'+str(percent_identity)+'\t'+str(alignment.length)
-
-    #print hit_list
-    #print exclude_list
-    for record in record_dict:
-    	for VSG in hit_list:
-#    		if VSG not in exclude_list:
-   			if record_dict[record].id == VSG:
-   				SeqIO.write(record_dict[record], outfile, "fasta")
+	    					print record_dict[blast_record.query]
+	    					SeqIO.write(record_dict[blast_record.query], outfile, "fasta")
                     
     outfile.close
 
