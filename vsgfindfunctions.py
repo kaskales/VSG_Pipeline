@@ -207,41 +207,38 @@ def blast_sort(v,n,s):
     print 'VSG hits! - maybe?'
     
     for blast_record in blast_records:
-            for alignment in blast_record.alignments:
-                    for hsp in alignment.hsps:
-                            if hsp.expect < 1.0e-10: 
-                                    if not blast_record.query in hit_list:
-                                            hit_list.append(str(blast_record.query))
-                                            percent_query_aligned = (100.0 * hsp.identities) / blast_record.query_letters
-                                            percent_identity = (100.0 * hsp.identities) / alignment.length
-                                            print str(blast_record.query)+'\t'+str(alignment.title)+'\t'+str(percent_query_aligned)+'\t'+str(percent_identity)+'\t'+str(alignment.length)
+        for alignment in blast_record.alignments:
+            for hsp in alignment.hsps:
+                if hsp.expect < 1.0e-10: 
+                    if not blast_record.query in hit_list:
+                        hit_list.append(str(blast_record.query))
+                        percent_query_aligned = (100.0 * hsp.identities) / blast_record.query_letters
+                        percent_identity = (100.0 * hsp.identities) / alignment.length
+                        print str(blast_record.query)+'\t'+str(alignment.title)+'\t'+str(percent_query_aligned)+'\t'+str(percent_identity)+'\t'+str(alignment.length)
     
     print 'Now looking for non-VSG transcripts...'
     
     for blast_record_nonVSG in blast_records_nonVSG:
-            for alignment in blast_record_nonVSG.alignments:
-                    for hsp in alignment.hsps: 
-                            percent_identity = (100.0 * hsp.identities) / alignment.length
-                            percent_query_identity = (100.0 * hsp.identities) / blast_record_nonVSG.query_letters
-                            print blast_record_nonVSG.query+'\t'+alignment.title+'\t'+str(percent_identity)+'\t'+str(percent_query_identity)+'\t'
-                            if percent_query_identity > 30 and hsp.identities > 300:
-                                    if not blast_record_nonVSG.query in exclude_list:
-                                            exclude_list.append(str(blast_record_nonVSG.query))
-                                            #print 'nonVSG hit!'+'\t'+str(blast_record_nonVSG.query)+' \t '+str(alignment.title)
-                            if percent_identity > 90:
-                                    if not blast_record_nonVSG.query in exclude_list:
-                                            exclude_list.append(str(blast_record_nonVSG.query))
-                                            #print 'nonVSG hit!'+'\t'+str(blast_record_nonVSG.query)+' \t '+str(alignment.title)
+        for alignment in blast_record_nonVSG.alignments:
+            for hsp in alignment.hsps: 
+                percent_identity = (100.0 * hsp.identities) / alignment.length
+                percent_query_identity = (100.0 * hsp.identities) / blast_record_nonVSG.query_letters
+                print blast_record_nonVSG.query+'\t'+alignment.title+'\t'+str(percent_identity)+'\t'+str(percent_query_identity)+'\t'
+                if percent_query_identity > 30 and hsp.identities > 300:
+                    if not blast_record_nonVSG.query in exclude_list:
+                        exclude_list.append(str(blast_record_nonVSG.query))
+                        #print 'nonVSG hit!'+'\t'+str(blast_record_nonVSG.query)+' \t '+str(alignment.title)
+                if percent_identity > 90:
+                    if not blast_record_nonVSG.query in exclude_list:
+                        exclude_list.append(str(blast_record_nonVSG.query))
+                        #print 'nonVSG hit!'+'\t'+str(blast_record_nonVSG.query)+' \t '+str(alignment.title)
     #print hit_list
     #print exclude_list
-                                            
-    
-    
     for record in record_dict:
-            for VSG in hit_list:
-                    if VSG not in exclude_list:
-                            if record_dict[record].id == VSG:
-                                    SeqIO.write(record_dict[record], outfile, "fasta")
+        for VSG in hit_list:
+            if VSG not in exclude_list:
+                if record_dict[record].id == VSG:
+                    SeqIO.write(record_dict[record], outfile, "fasta")
                     
     outfile.close
 
