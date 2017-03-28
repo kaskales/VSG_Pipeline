@@ -28,7 +28,7 @@ def bowtie(f,n,p):
     subprocess.call(['bowtie -v 2 -m 1 -p 6 -S -a --strata --best '+str(p)+'MULTo1.0/files/tbb/tb'+str(n)+'/bowtie_indexes/tb'+str(n)+'_genome/tb'+str(n)+'_no_random '+str(samplename)+'.fq '+str(samplename)+'_align.sam'], shell=True)
 
 def count(f,n,p):
-    #run rpkmforgenes.py
+    #runs rpkmforgenes.py
     if f.split('.')[1]!='sam':
         print 'Input must be sam file!'
     else:

@@ -61,12 +61,8 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument('-i', nargs= '+', metavar='list of files - FASTA', action="store", dest="i")
 # nargs = number of arguments to accept, '+' accepts all, but has a requirement of 1 argument
-
-#parser.add_argument('-', metavar='reference assembly - FASTA',  action="store", dest="r")
-parser.add_argument('-l', metavar='minimum ORF length for analysis, default is 900',type=int, action ="store", dest = "l", default=900) 
 arguments = parser.parse_args()
-
-l=arguments.l
+#parser.add_argument('-', metavar='reference assembly - FASTA',  action="store", dest="r")
 
 for file in arguments.i:
 	print ' *****analyzing '+str(file)+' *****'

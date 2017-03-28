@@ -137,7 +137,7 @@ for key in orf_dict.iterkeys(): #keys are contig names '>______'
 			# 
 		if item[3] == False:
 			ORF_seq = SeqRecord(item[0], id=key+'_'+str(count)+'_'+str(item[1])+'_'+str(item[2])+'_RC') # RC = reverse complement indication
-		print str(ORF_seq.seq)
+		#print str(ORF_seq.seq)
 		ORF_outfile.write('>'+str(ORF_seq.id)+'\n'+str(ORF_seq.seq)+'\n')
 		#SeqIO.write(ORF_seq, ORF_outfile, "fasta")
 		count = count + 1
@@ -165,5 +165,7 @@ for record in record_dict2:
 trans_out_file.close()
 
 fixSeqRecord(argv[4].split('.')[0]+'_trans.fa')
+
+print len(orf_dict.keys())
 
 	
