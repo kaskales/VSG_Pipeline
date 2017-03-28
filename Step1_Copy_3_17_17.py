@@ -57,14 +57,10 @@ for record in record_dict: # iterates through the sequences
 
 				trans = nuc[frame:].translate() # translates the sequence nuc[frame] into protein sequence for the current frame
 				# find a way for it to stop at first stop codon
-
 				trans_len = len(trans) # gets length of the protein sequence
-				seq_len = len(record_dict[record].seq) # gets the length of the nucleotide sequence from the fasta file 
-				
-				
+				seq_len = len(record_dict[record].seq) # gets the length of the nucleotide sequence from the fasta file 						
 				trans_end = trans.find("*", 0)
 				trans_start = trans.find("M", 0)
-				#print str(strand) + " -- " + str(frame)
 				if trans_start != -1: #start codon exists
 					if trans_end != -1: # end codon exists
 						if trans_start < trans_end: # there is a start codon before the 1st stop codon
@@ -84,9 +80,7 @@ for record in record_dict: # iterates through the sequences
 								count += 1
 							# if neither protein is long enough,or even if it was, we will move on to find where the next start codon is, and find the end codon for that one
 							trans_start = trans.find("M", trans_end)
-							trans_end = trans.find("*", trans_start)
-							#print trans_start
-							#print trans_end		
+							trans_end = trans.find("*", trans_start)		
 						else: # there is a start codon AFTER the first appearing stop codon
 							if trans_end > min_pro_len: # is the seq_start to end codon is long enough for the a min length protein
 								#print "C"
@@ -98,10 +92,7 @@ for record in record_dict: # iterates through the sequences
 							trans_end = trans.find("*", trans_start) # will start checking the orf at that first found start codon, sets new trans_end to stop codon after the start	
 					else: # start codon exists, but there is no stop codon anywhere! :O
 					# this portion of the code will take the entire thing as an ORF, we are being generous
-						if strand ==1:
-							addSeqRecord(record_dict[record], 0, seq_len, count)
-						else:
-							addSeqRecord_RC(record_dict[record], 0, seq_len, count)
+						addSeqRecord_RC(record_dict[record], 0, seq_len, count)
 						count += 1
 					# this part isn't generous and only takes from the start codon till the end of the sequence
 #						if trans_len-trans_start > min_pro_len: # is the remaining protein segment after the start codon long enought to be a protein?
@@ -123,10 +114,7 @@ for record in record_dict: # iterates through the sequences
 						count += 1	
 					trans_start = trans_len # won't search for more, since there aren't any start codons anywhere
 				else: # there are no start or stop codons anywhere?!
-					if strand ==1:
-						addSeqRecord(record_dict[record], 0, seq_len, count)
-					else:
-						addSeqRecord_RC(record_dict[record], 0, seq_len, count)
+					addSeqRecord_RC(record_dict[record], 0, seq_len, count)
 					trans_start = trans_len
 				
 				trans_max = trans_len - min_pro_len # farthest a codon can be before it's below min protein length
@@ -149,13 +137,9 @@ for record in record_dict: # iterates through the sequences
 							addSeqRecord(record_dict[record], frame+trans_start*3, frame+(trans_end*3)+3, count)
 						else:
 							addSeqRecord_RC(record_dict[record], max(frame, seq_len-frame-(trans_end*3)-3), seq_len-frame-(trans_start*3), count)
-						count += 1
-						#print trans_start
-						#print trans_end	
+						count += 1	
 						trans_start = trans.find("M", trans_end) # finds index of start aa sequence
-						trans_end = trans.find("*", trans_start)
-						#print trans_start
-						#print trans_end	
+						trans_end = trans.find("*", trans_start)	
 					else:
 						trans_start = trans.find("M", trans_end) 
 						trans_end = trans.find("*", trans_start)			
@@ -168,12 +152,3 @@ ORF_outfile.close()
 fixSeqRecord(argv[4])
 trans_out_file.close()
 fixSeqRecord(argv[4].split('.')[0]+'_trans.fa')
-
-
-
-
-
-
-
-
-
