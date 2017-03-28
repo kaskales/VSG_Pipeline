@@ -32,10 +32,7 @@ def blast_sort(v,n,s):
     for blast_record_nonVSG in blast_records_nonVSG:
     	for alignment in blast_record_nonVSG.alignments:
     		for hsp in alignment.hsps: 
-    			print hsp.identities
-    			print alignment.length
     			percent_identity = (100.0 * hsp.identities) / alignment.length # hsp.identities is a tuple(bp matches, total bp in seq) to give percent match of sequence, percent identity is # of bp
-    			print percent_identity
     			percent_query_identity = (100.0 * hsp.identities) / blast_record_nonVSG.query_letters
     			#print blast_record_nonVSG.query+'\t'+alignment.title+'\t'+str(percent_identity)+'\t'+str(percent_query_identity)+'\t'
     			if (percent_query_identity > 30 and hsp.identities > 300) or (percent_identity > 90):
