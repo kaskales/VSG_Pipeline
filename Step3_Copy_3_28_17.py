@@ -22,7 +22,6 @@ n=arguments.n
 p=arguments.p
 
 # make multo dir
-samplename = r.split('.')[0]
 tbnumber = str(n)
 path = str(p)
 #make multo file heirarchy from given basename

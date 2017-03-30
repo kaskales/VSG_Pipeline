@@ -29,12 +29,12 @@ def bowtie(f,n,p):
 
 def count(f,n,p):
     #runs rpkmforgenes.py
-    if f.split('.')[1]!='sam':
+    if f[-3:]!='sam':
         print 'Input must be sam file!'
     else:
         samplename = f.split('.')[0]
         tbnumber = str(n)
-        subprocess.call(['python '+str(p)+'MULTo1.0/rpkmforgenes.py -i '+samplename+'.sam -samu -bedann -a '+str(p)+'MULTo1.0/files/tbb/tb'+tbnumber+'/fastaFiles/annotationFiles/chr1.bed -u '+str(p)+'MULTo1.0/files/tbb/tb'+tbnumber+'/MULfiles/tb'+tbnumber+'_20-255/MULTo_files -o '+samplename+'_MULTo.txt'], shell=True)
+        subprocess.call(['python '+str(p)+'MULTo1.0/src/rpkmforgenes.py -i '+samplename+'.sam -samu -bedann -a '+str(p)+'MULTo1.0/files/tbb/tb'+tbnumber+'/fastaFiles/annotationFiles/chr1.bed -u '+str(p)+'MULTo1.0/files/tbb/tb'+tbnumber+'/MULfiles/tb'+tbnumber+'_20-255/MULTo_files -o '+samplename+'_MULTo.txt'], shell=True)
     
         #analyze MULTo out	
         infile = open(samplename+'_MULTo.txt','r')

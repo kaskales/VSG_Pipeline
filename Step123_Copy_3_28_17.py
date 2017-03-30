@@ -4,6 +4,7 @@ from Bio.Blast import NCBIXML
 from Bio import SeqIO 
 from Bio import Seq
 from sys import argv
+import vsganalysisfunctions as vsg
 import subprocess
 import argparse
 import time
@@ -35,30 +36,43 @@ def fixSeqRecord(file): # gets rid of not usefull stuff in the file comment ">" 
 
 def addSeqRecord(recordRD, start, end, count):
 	sequence = recordRD.seq[start:end]
-	ORF_outfile.write('>'+str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+'\n'+str(sequence)+'_'+filename+'\n')
-	SeqIO.write(SeqRecord(sequence.translate(), id=str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+'_'+filename), trans_out_file, "fasta")
+	ORF_outfile.write('>'+str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+'\n'+str(sequence)+'\n')
+	SeqIO.write(SeqRecord(sequence.translate(), id=str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)), trans_out_file, "fasta")
 def addSeqRecord_RC(recordRD, start, end, count):
 	sequence = recordRD.seq[start:end].reverse_complement()
-	ORF_outfile.write('>'+str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+'_RC'+'\n'+str(sequence)+'_'+filename+'\n')
-	SeqIO.write(SeqRecord(sequence.translate(), id=str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+'_RC'+'_'+filename), trans_out_file, "fasta")
+	ORF_outfile.write('>'+str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+'_RC'+'\n'+str(sequence)+'\n')
+	SeqIO.write(SeqRecord(sequence.translate(), id=str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+'_RC'), trans_out_file, "fasta")
 
 
 parser = argparse.ArgumentParser()
 
 parser.add_argument('-t', nargs= '+', metavar='Trinity files to be put through the pipeline', action="store", dest="t") # list of trinity files to be put through the pipline
 parser.add_argument('-d', help='additional descriptive terms to name your run', action="store", dest='d', default='')
-parser.add_argument('-m', metavar='minimum protein length you are filtering for', action ="store", dest = "m") 
+parser.add_argument('-m', metavar='minimum protein length you are filtering for', action ="store", dest = "m", default=300) 
 parser.add_argument('-p', help='path to MULTo1.0 folder. default is ~/', action="store", dest='p', default='~/') # default assumes MULTo is in your home dir
+parser.add_argument('-cpu', help='number of processors', action="store", dest='cpu', default='2')
+parser.add_argument('-v', help='number of mismatches allowed', action="store", dest='v', default='2')
+parser.add_argument('-noqc', help='QC will not be run, default is on', action ='store_false', dest = 'qc' , default = False)
+group = parser.add_mutually_exclusive_group()
+group.add_argument('-m_only', help='only run rpkmforgenes/multo scripts, input is samfile', action ='store_false', dest = 'm_only', default = False)
+group.add_argument('-qc_only', help= 'only run QC, default is off', action= 'store_true', dest='qc_only', default = False)
+parser.add_argument('-i', help='list of files - FASTQ, or .sam is bowtie and QC is turned off', action="store", dest="i", required=True)
+
 
 arguments = parser.parse_args()
+global timeRan
+timeRan = time.strftime("%d-%m-%Y-%H_%M")  # Day/Month/Year-Hour:Minute , names the folder for output files
+if arguments.d != '':
+	timeRan = timeRan + "-"+ str(arguments.d)
 
-timeRan = time.strftime("%d/%m/%Y-%H:%M_") + str(arguments.d) # Day/Month/Year-Hour:Minute , names the folder for output files
-os.makedirs(timeRan) # creates the folder
-contig_outfile = open(os.path.join(timeRan, timeRan+"contig.fa"), 'w') # contig output file
+if not os.path.exists(timeRan):
+	os.makedirs(timeRan) # creates the folder
+
+contig_outfile = open(os.path.join(timeRan, timeRan+"_contig.fa"), 'w') # contig output file
 global ORF_outfile
-ORF_outfile = open(os.path.join(timeRan, timeRan+"orf.fa"), 'w') # orf output file 
+ORF_outfile = open(os.path.join(timeRan, timeRan+"_orf.fa"), 'w') # orf output file 
 global trans_out_file
-trans_out_file = open(os.path.join(timeRan, timeRan+'orf_trans.fa'), 'w') # translated orf file
+trans_out_file = open(os.path.join(timeRan, timeRan+'_orf_trans.fa'), 'w') # translated orf file
 min_pro_len = int(arguments.m)
 
 
@@ -168,6 +182,157 @@ for file in arguments.t: # loops all the trinity files to find orf, will add eve
 				SeqIO.write(record_dict[record], contig_outfile, "fasta") 
 
 ORF_outfile.close()
-fixSeqRecord(argv[4])
+fixSeqRecord(timeRan + "/"+timeRan+"_orf.fa")
 trans_out_file.close()
-fixSeqRecord(argv[4].split('.')[0]+'_trans.fa')
+fixSeqRecord(timeRan + "/"+timeRan+'_orf_trans.fa')
+
+# Step 2 
+
+def blast_sort(v,n,s):
+    #v = vsg xml file
+    #n = nonvsg xmlfile
+    #s = sequence file, contigs from blast searches
+    result_handle = open(v)
+    nonVSGresult_handle = open(n)
+    blast_records = NCBIXML.parse(result_handle) # returns an iterator of the blast results
+    #blast_record = blast_records.next()
+    record_dict = SeqIO.index(s,"fasta")
+    
+    outfile = open(s.split('.')[0]+'_VSGs.fa', 'w')
+    scorefile = open(s.split('.')[0]+'_VSGs_scores.fa', 'w')
+
+    blast_records_nonVSG = NCBIXML.parse(nonVSGresult_handle)
+    blast_record_nonVSG = blast_records_nonVSG.next()
+    
+    hit_list = [] # list of VSGs we have found! 
+    exclude_list = []
+        
+    print 'Now looking for non-VSG transcripts...'
+    
+    for blast_record_nonVSG in blast_records_nonVSG:
+    	for alignment in blast_record_nonVSG.alignments:
+    		for hsp in alignment.hsps: 
+    			percent_identity = (100.0 * hsp.identities) / alignment.length # hsp.identities is a tuple(bp matches, total bp in seq) to give percent match of sequence, percent identity is # of bp
+    			percent_query_identity = (100.0 * hsp.identities) / blast_record_nonVSG.query_letters
+    			#print blast_record_nonVSG.query+'\t'+alignment.title+'\t'+str(percent_identity)+'\t'+str(percent_query_identity)+'\t'
+    			if (percent_query_identity > 30 and hsp.identities > 300) or (percent_identity > 90):
+    				if not blast_record_nonVSG.query in exclude_list:
+    					exclude_list.append(str(blast_record_nonVSG.query))
+    					#print 'nonVSG hit!'+'\t'+str(blast_record_nonVSG.query)+' \t '+str(alignment.title)
+
+    print 'VSG hits! - maybe?'
+    
+    for blast_record in blast_records:
+    	for alignment in blast_record.alignments:
+    		for hsp in alignment.hsps:
+    			if hsp.expect < 1.0e-10: # hsp.expect = e value for the hsp value, the lower the e value, the more statistically significant 
+    				if not blast_record.query in hit_list: # if this query hasn't already been added to the hit list, add it now
+    					if not blast_record.query in exclude_list: # if the query isn't a fake VSG hit, add it now!
+	    					hit_list.append(str(blast_record.query))											# percent query aligned										# percent identity
+	    					scorefile.write(str(blast_record.query)+'\t'+str(alignment.title)+'\t'+str((100.0 * hsp.identities) / blast_record.query_letters)+'\t'+str((100.0 * hsp.identities) / alignment.length)+'\t'+str(alignment.length)+'\n')
+	    					SeqIO.write(record_dict[blast_record.query], outfile, "fasta")
+                    
+    outfile.close
+    scorefile.close
+
+
+print ' *****analyzing '+timeRan + "/"+timeRan+"_orf.fa"+' *****'
+filename = timeRan + "/"+timeRan+"_orf"
+#blast VSG
+subprocess.call(['blastn -db tb427_vsgs -query '+str(filename)+'.fa -outfmt 5 -out '+str(filename)+'.xml'], shell=True)
+#blast nonVSG
+subprocess.call(['blastn -db NOTvsgs -query '+str(filename)+'.fa -outfmt 5 -out '+str(filename)+'_nonVSG.xml'], shell=True)
+#get all the blast results which are for ONLY VSGs, get rid of hits which are VSG-similar but not vsgs
+blast_sort(str(filename)+'.xml', str(filename)+'_nonVSG.xml',filename+".fa")
+# cdhit merge
+subprocess.call(['cd-hit-est -i '+filename+'_VSGs.fa '+' -d 0 -o '+filename+'_merged.fa -c 0.9 -n 8 -r 1 -G 1 -g 1 -b 20 -s 0.0 -aL 0.0 -aS 0.5'], shell=True)
+
+
+# Step 3
+
+currDir = os.getcwd()
+print currDir	
+path = str(arguments.p)
+os.path.expanduser('~')
+os.chdir(os.path.expanduser('~'))
+print os.getcwd()
+os.chdir('MULTo1.0')
+
+# make multo dir
+tbnumber = timeRan
+
+#make multo file heirarchy from given basename
+subprocess.call(['mkdir -p '+path+'MULTo1.0/files/tbb/tb'+tbnumber+'/fastaFiles/annotationFiles/'], shell=True)
+subprocess.call(['mkdir -p '+path+'MULTo1.0/files/tbb/tb'+tbnumber+'/fastaFiles/genomeFasta/noRandomChrom'], shell=True)
+
+# make bed
+record_dict = SeqIO.index(currDir +'/' + filename+'_VSGs.fa',"fasta")
+concatFA = open('chr1.fa', 'w')
+BEDfile = open('chr1.bed', 'w')  
+name = 'chr1'
+#name of chr
+start = 0
+end = 0
+N = 'N'*100
+concatFA.write('>'+name+'\n')
+for record in record_dict:
+    concatFA.write(str(record_dict[record].seq)+str(N)) # adds lots of N's to the end of the sequence
+    seqlen = len(record_dict[record].seq)
+    end = start + seqlen
+    seqname = record_dict[record].id
+    BEDfile.write(name+'\t'+str(start)+'\t'+str(end)+'\t'+str(seqname)+'\t 0 \t + \t'+str(start)+'\t'+str(end)+'\n')
+    start = end + 100          
+concatFA.close()
+BEDfile.close()
+   
+# move multo 
+#move concat and bedfile into new folders
+subprocess.call(['mv chr1.fa '+path+'MULTo1.0/files/tbb/tb'+tbnumber+'/fastaFiles/genomeFasta/noRandomChrom'], shell=True)
+subprocess.call(['mv chr1.bed '+path+'MULTo1.0/files/tbb/tb'+tbnumber+'/fastaFiles/annotationFiles/'], shell=True)
+#run MULTo 
+subprocess.call(['python '+path+'MULTo1.0/src/MULTo1.0.py -s tbb -a tb'+tbnumber+' -v '+arguments.v+' -O -p '+arguments.cpu], shell=True)
+
+os.chdir(currDir) # sets working directory back to VSG____ folder
+# Step 4
+
+
+# file = FASTQ file
+
+n = tbnumber
+p = path
+qc_only = arguments.qc_only
+m_only = arguments.m_only
+file = arguments.i
+
+if qc_only==True: # default is false, don't worry about it for now
+	#vsg.QC(file)  
+	print ""		
+elif m_only==True: # defaults is false
+	print file
+	vsg.count(file,n,p)
+else:
+	if arguments.qc==True: # default is false
+		vsg.QC(file)
+		file = file.split('.')[0]+'_trimmed3.fq'
+		vsg.bowtie(file,n,p)
+		file =file.split('.')[0]+'_align.sam'
+	else:
+		vsg.bowtie(file,n,p)
+		file =file.split('.')[0]+'_align.sam'
+	print file
+	vsg.count(file,n,p)
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
