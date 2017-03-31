@@ -59,6 +59,12 @@ group.add_argument('-qc_only', help= 'only run QC, default is off', action= 'sto
 parser.add_argument('-i', help='list of files - FASTQ, or .sam is bowtie and QC is turned off', action="store", dest="i", required=True)
 
 
+# add segment to tkae sequence data, trim with trim_galore and cutadapt
+
+# run trimmed sequences trough trinity
+
+# then take the trimmed trinity sequences and run through this pipeline
+
 arguments = parser.parse_args()
 global timeRan
 timeRan = time.strftime("%d-%m-%Y-%H_%M")  # Day/Month/Year-Hour:Minute , names the folder for output files
@@ -292,35 +298,33 @@ subprocess.call(['mv chr1.bed '+path+'MULTo1.0/files/tbb/tb'+tbnumber+'/fastaFil
 #run MULTo 
 subprocess.call(['python '+path+'MULTo1.0/src/MULTo1.0.py -s tbb -a tb'+tbnumber+' -v '+arguments.v+' -O -p '+arguments.cpu], shell=True)
 
-os.chdir(currDir) # sets working directory back to VSG____ folder
+os.chdir(currDir) # sets working directory back to previous folder
+
+
 # Step 4
 
 
 # file = FASTQ file
 
-n = tbnumber
-p = path
-qc_only = arguments.qc_only
-m_only = arguments.m_only
 file = timeRan + "/" + arguments.i
 
-if qc_only==True: # default is false, don't worry about it for now
+if arguments.qc_only==True: # default is false, don't worry about it for now
 	#vsg.QC(file)  
 	print ""		
-elif m_only==True: # defaults is false
+elif arguments.m_only==True: # defaults is false
 	print file
-	vsg.count(file,n,p)
+	vsg.count(file,tbnumber,path)
 else:
 	if arguments.qc==True: # default is false
 		vsg.QC(file)
 		file = file.split('.')[0]+'_trimmed3.fq'
-		vsg.bowtie(file,n,p)
+		vsg.bowtie(file,tbnumber,path)
 		file =file.split('.')[0]+'_align.sam'
 	else:
-		vsg.bowtie(file,n,p)
+		vsg.bowtie(file,tbnumber,path)
 		file =file.split('.')[0]+'_align.sam'
 	print file
-	vsg.count(file,n,p)
+	vsg.count(file,tbnumber,path)
     
 
 
