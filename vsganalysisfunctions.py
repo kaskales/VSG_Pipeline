@@ -19,6 +19,11 @@ def QC(n):
     print 'removing intermediate trimmed files...'
     subprocess.call(['rm '+str(samplename)+'_trimmed2.fq' ], shell=True)
     subprocess.call(['rm '+str(samplename)+'_trimmed.fq' ], shell=True)
+
+# options to run with trinity
+#   --min_contig_length
+#   --normalize_reads
+# Trinity --seqType fq --max_memory 10G --single 15-19-1_test_trimmed3.fq --min_contig_length 900 --normalize_reads
     
 def bowtie(f,n,p):
     #p = path to MULTo1.0 folder, default = ~/bioinformatic_resources/

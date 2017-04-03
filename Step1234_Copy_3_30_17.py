@@ -46,6 +46,7 @@ def addSeqRecord_RC(recordRD, start, end, count):
 
 parser = argparse.ArgumentParser()
 
+parser.add_argument('-s', metavar='sequence files to be put through the pipeline, fq', action="store", dest="s")
 parser.add_argument('-t', nargs= '+', metavar='Trinity files to be put through the pipeline', action="store", dest="t") # list of trinity files to be put through the pipline
 parser.add_argument('-d', help='additional descriptive terms to name your run', action="store", dest='d', default='')
 parser.add_argument('-m', metavar='minimum protein length you are filtering for', action ="store", dest = "m", default=300) 
@@ -80,6 +81,12 @@ ORF_outfile = open(os.path.join(timeRan, timeRan+"_orf.fa"), 'w') # orf output f
 global trans_out_file
 trans_out_file = open(os.path.join(timeRan, timeRan+'_orf_trans.fa'), 'w') # translated orf file
 min_pro_len = int(arguments.m)
+
+subprocess.call(['trim_galore --length 50 --stringency 3 --dont_gzip '+str(arguments.s) +  ' --output_dir ' + timeRan], shell=True)
+subprocess.call(['cutadapt -b ATTTAGGTGACACTATAG -b CTATAGTGTCACCTAAAT  '+str(samplename)+'_trimmed.fq > '+str(samplename)+'_trimmed2.fq '], shell=True)
+subprocess.call(['trim_galore --length 50 --stringency 3 --dont_gzip '+str(samplename)+'_trimmed2.fq '], shell=True)
+
+subprocess.call(['Trinity --seqType fq --max_memory 10G --single ' + str(arguments.s) + '--min_contig_length ' + str(min_pro_len*3) + ' --normalize_reads '], shell=True)
 
 
 for file in arguments.t: # loops all the trinity files to find orf, will add everything to the same file
