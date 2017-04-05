@@ -36,18 +36,18 @@ def fixSeqRecord(file): # gets rid of not usefull stuff in the file comment ">" 
 
 def addSeqRecord(recordRD, start, end, count):
 	sequence = recordRD.seq[start:end]
-	ORF_outfile.write('>'+str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+'\n'+str(sequence)+'\n')
-	SeqIO.write(SeqRecord(sequence.translate(), id=str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)), trans_out_file, "fasta")
+	ORF_outfile.write('>'+str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+"_" + filename + '\n'+str(sequence)+'\n')
+	SeqIO.write(SeqRecord(sequence.translate(), id=str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+"_" + filename), trans_out_file, "fasta")
 def addSeqRecord_RC(recordRD, start, end, count):
 	sequence = recordRD.seq[start:end].reverse_complement()
-	ORF_outfile.write('>'+str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+'_RC'+'\n'+str(sequence)+'\n')
-	SeqIO.write(SeqRecord(sequence.translate(), id=str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+'_RC'), trans_out_file, "fasta")
+	ORF_outfile.write('>'+str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+'_RC_' + filename +'\n'+str(sequence)+'\n')
+	SeqIO.write(SeqRecord(sequence.translate(), id=str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+'_RC_' + filename), trans_out_file, "fasta")
 
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument('-s', metavar='sequence files to be put through the pipeline, fq', action="store", dest="s")
-parser.add_argument('-t', nargs= '+', metavar='Trinity files to be put through the pipeline', action="store", dest="t") # list of trinity files to be put through the pipline
+parser.add_argument('-s', nargs= '+',metavar='sequence files to be put through the pipeline, fq', action="store", dest="s")
+#parser.add_argument('-t', nargs= '+', metavar='Trinity files to be put through the pipeline', action="store", dest="t") # list of trinity files to be put through the pipline
 parser.add_argument('-d', help='additional descriptive terms to name your run', action="store", dest='d', default='')
 parser.add_argument('-m', metavar='minimum protein length you are filtering for', action ="store", dest = "m", default=300) 
 parser.add_argument('-p', help='path to MULTo1.0 folder. default is ~/', action="store", dest='p', default='~/') # default assumes MULTo is in your home dir
@@ -57,7 +57,7 @@ parser.add_argument('-noqc', help='QC will not be run, default is on', action ='
 group = parser.add_mutually_exclusive_group()
 group.add_argument('-m_only', help='only run rpkmforgenes/multo scripts, input is samfile', action ='store_false', dest = 'm_only', default = False)
 group.add_argument('-qc_only', help= 'only run QC, default is off', action= 'store_true', dest='qc_only', default = False)
-parser.add_argument('-i', help='list of files - FASTQ, or .sam is bowtie and QC is turned off', action="store", dest="i", required=True)
+#parser.add_argument('-i', help='list of files - FASTQ, or .sam is bowtie and QC is turned off', action="store", dest="i", required=True)
 
 
 # add segment to tkae sequence data, trim with trim_galore and cutadapt
@@ -71,7 +71,7 @@ global timeRan
 timeRan = time.strftime("%d-%m-%Y-%H_%M")  # Day/Month/Year-Hour:Minute , names the folder for output files
 if arguments.d != '':
 	timeRan = timeRan + "-"+ str(arguments.d)
-
+timeRan = "04-04-2017-14_25"
 if not os.path.exists(timeRan):
 	os.makedirs(timeRan) # creates the folder
 
@@ -82,19 +82,25 @@ global trans_out_file
 trans_out_file = open(os.path.join(timeRan, timeRan+'_orf_trans.fa'), 'w') # translated orf file
 min_pro_len = int(arguments.m)
 
-subprocess.call(['trim_galore --length 50 --stringency 3 --dont_gzip '+str(arguments.s) +  ' --output_dir ' + timeRan], shell=True)
-subprocess.call(['cutadapt -b ATTTAGGTGACACTATAG -b CTATAGTGTCACCTAAAT  '+str(samplename)+'_trimmed.fq > '+str(samplename)+'_trimmed2.fq '], shell=True)
-subprocess.call(['trim_galore --length 50 --stringency 3 --dont_gzip '+str(samplename)+'_trimmed2.fq '], shell=True)
+trinityfiles = []
 
-subprocess.call(['Trinity --seqType fq --max_memory 10G --single ' + str(arguments.s) + '--min_contig_length ' + str(min_pro_len*3) + ' --normalize_reads '], shell=True)
+for file in arguments.s: # could be putting in multiple sequencing data files
+	filenameS = file.split('.')[0] 
+	#os.makedirs(filenameS)
+	#subprocess.call(['trim_galore --stringency 3 --dont_gzip '+ '--output_dir ' + timeRan + "/" + filenameS + " " +str(file) ], shell=True)
+	#subprocess.call(['cutadapt -b ATTTAGGTGACACTATAG -b CTATAGTGTCACCTAAAT '+ timeRan + "/"+ filenameS+"/"+str(filenameS)+'_trimmed.fq > '+ timeRan + "/"+filenameS + "/"+str(filenameS)+'_trimmed2.fq'], shell=True)
+	#subprocess.call(['trim_galore --length 50 --stringency 3 --dont_gzip ' + '--output_dir ' + filenameS + " " + timeRan + "/"+foldername+ "/"+str(filenameS)+'_trimmed2.fq '], shell=True)
+
+	#subprocess.call(['Trinity --seqType fq --max_memory 10G --single ' + timeRan + "/"+ filenameS+"/"+str(filenameS) +'_trimmed2.fq ' +'--min_contig_length ' + str(min_pro_len*3) + ' --full_cleanup --normalize_reads --output ' + timeRan+"/"+filenameS+"_Trinity/"], shell=True)
+	trinityfiles.append(filenameS)
 
 
-for file in arguments.t: # loops all the trinity files to find orf, will add everything to the same file
-	record_dict = SeqIO.index(file,"fasta") # "parses" a fasta file, creating a dictionary-like object of sequences. not everything is kept in memeory. instead it just records where each record is within the file. parses on demand. 
+for file in trinityfiles: # loops all the trinity files to find orf, will add everything to the same file
+	record_dict = SeqIO.index(timeRan+ "/" + file+"_Trinity/Trinity.fasta","fasta") # "parses" a fasta file, creating a dictionary-like object of sequences. not everything is kept in memeory. instead it just records where each record is within the file. parses on demand. 
 	# the key is the dictionary is the ">" line in the fasta file
 	 # minimum protein length, within typical VSG protein length, in a.a.
 	global filename
-	filename = str(file).split('.')[0] # takes only the name of the file, this will be added to the ORF description, so we know where it came from
+	filename = file # takes only the name of the file, this will be added to the ORF description, so we know where it came from
 	for record in record_dict: # iterates through the sequences
 		#print record_dict[record]
 		if len(record_dict[record].seq) > ((min_pro_len)*3): # if the orf length is > 3 times the specified protein length 
@@ -272,11 +278,10 @@ print os.getcwd()
 os.chdir('MULTo1.0')
 
 # make multo dir
-tbnumber = timeRan
 
 #make multo file heirarchy from given basename
-subprocess.call(['mkdir -p '+path+'MULTo1.0/files/tbb/tb'+tbnumber+'/fastaFiles/annotationFiles/'], shell=True)
-subprocess.call(['mkdir -p '+path+'MULTo1.0/files/tbb/tb'+tbnumber+'/fastaFiles/genomeFasta/noRandomChrom'], shell=True)
+subprocess.call(['mkdir -p '+path+'MULTo1.0/files/tbb/tb'+timeRan+'/fastaFiles/annotationFiles/'], shell=True)
+subprocess.call(['mkdir -p '+path+'MULTo1.0/files/tbb/tb'+timeRan+'/fastaFiles/genomeFasta/noRandomChrom'], shell=True)
 
 # make bed
 record_dict = SeqIO.index(currDir +'/' + filename+'_VSGs.fa',"fasta")
@@ -300,10 +305,10 @@ BEDfile.close()
    
 # move multo 
 #move concat and bedfile into new folders
-subprocess.call(['mv chr1.fa '+path+'MULTo1.0/files/tbb/tb'+tbnumber+'/fastaFiles/genomeFasta/noRandomChrom'], shell=True)
-subprocess.call(['mv chr1.bed '+path+'MULTo1.0/files/tbb/tb'+tbnumber+'/fastaFiles/annotationFiles/'], shell=True)
+subprocess.call(['mv chr1.fa '+path+'MULTo1.0/files/tbb/tb'+timeRan+'/fastaFiles/genomeFasta/noRandomChrom'], shell=True)
+subprocess.call(['mv chr1.bed '+path+'MULTo1.0/files/tbb/tb'+timeRan+'/fastaFiles/annotationFiles/'], shell=True)
 #run MULTo 
-subprocess.call(['python '+path+'MULTo1.0/src/MULTo1.0.py -s tbb -a tb'+tbnumber+' -v '+arguments.v+' -O -p '+arguments.cpu], shell=True)
+subprocess.call(['python '+path+'MULTo1.0/src/MULTo1.0.py -s tbb -a tb'+timeRan+' -v '+arguments.v+' -O -p '+arguments.cpu], shell=True)
 
 os.chdir(currDir) # sets working directory back to previous folder
 
@@ -313,28 +318,11 @@ os.chdir(currDir) # sets working directory back to previous folder
 
 # file = FASTQ file
 
-file = timeRan + "/" + arguments.i
-
-if arguments.qc_only==True: # default is false, don't worry about it for now
-	#vsg.QC(file)  
-	print ""		
-elif arguments.m_only==True: # defaults is false
-	print file
-	vsg.count(file,tbnumber,path)
-else:
-	if arguments.qc==True: # default is false
-		vsg.QC(file)
-		file = file.split('.')[0]+'_trimmed3.fq'
-		vsg.bowtie(file,tbnumber,path)
-		file =file.split('.')[0]+'_align.sam'
-	else:
-		vsg.bowtie(file,tbnumber,path)
-		file =file.split('.')[0]+'_align.sam'
-	print file
-	vsg.count(file,tbnumber,path)
-    
+for file in trinityfiles:
+	subprocess.call(['bowtie -v 2 -m 1 -p 6 -S -a --strata --best '+str(path)+'MULTo1.0/files/tbb/tb'+timeRan+'/bowtie_indexes/tb'+timeRan+'_genome/tb'+timeRan+'_no_random '+timeRan+'_trimmed2.fq '+timeRan + "/" + timeRan+'_align.sam'], shell=True)
 
 
+subprocess.call(['python '+str(path)+'MULTo1.0/src/rpkmforgenes.py -i '+timeRan+'_align.sam -samu -bedann -a '+str(path)+'MULTo1.0/files/tbb/tb'+timeRan+'/fastaFiles/annotationFiles/chr1.bed -u '+str(path)+'MULTo1.0/files/tbb/tb'+timeRan+'/MULfiles/tb'+timeRan+'_20-255/MULTo_files -o '+timeRan + "/"+ timeRan+'_MULTo.txt'], shell=True)
 
 
 
