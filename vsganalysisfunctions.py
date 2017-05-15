@@ -28,7 +28,7 @@ def QC(n):
 def bowtie(f,n,p):
     #p = path to MULTo1.0 folder, default = ~/bioinformatic_resources/
     #n = multo number
-    #f = file for fq input, 
+    #f = trinity file for fq input, 
     samplename = f.split('.')[0]
     subprocess.call(['bowtie -v 2 -m 1 -p 6 -S -a --strata --best '+str(p)+'MULTo1.0/files/tbb/tb'+str(n)+'/bowtie_indexes/tb'+str(n)+'_genome/tb'+str(n)+'_no_random '+str(samplename)+'.fq '+str(samplename)+'_align.sam'], shell=True)
 
