@@ -295,13 +295,7 @@ subprocess.call(['cd-hit-est -i '+timeRan+"/"+timeRan+'_orf_VSGs.fa '+' -o '+tim
 
 # Step 3
 
-currDir = os.getcwd()
-print currDir	
-path = str(arguments.p)
-os.path.expanduser('~')
-os.chdir(os.path.expanduser('~'))
-print os.getcwd()
-os.chdir('MULTo1.0')
+
 
 # make multo dir
 # MULTo identifies, stores and retrieves the minimum length required at each genomic position to be unique across the genome or transcriptome.
@@ -333,6 +327,15 @@ BEDfile.close()
 #move concat and bedfile into new folders
 subprocess.call(['mv chr1.fa '+path+'MULTo1.0/files/tbb/tb'+timeRan+'/fastaFiles/genomeFasta/noRandomChrom'], shell=True)
 subprocess.call(['mv chr1.bed '+path+'MULTo1.0/files/tbb/tb'+timeRan+'/fastaFiles/annotationFiles/'], shell=True)
+
+# move to MULTo folder
+currDir = os.getcwd()
+print currDir	
+path = str(arguments.p)
+os.path.expanduser('~')
+os.chdir(os.path.expanduser('~'))
+print os.getcwd()
+os.chdir('MULTo1.0')
 #run MULTo 
 subprocess.call(['python '+path+'MULTo1.0/src/MULTo1.0.py -s tbb -a tb'+timeRan+' -v '+arguments.v+' -O -p '+arguments.cpu], shell=True)
 

@@ -149,7 +149,8 @@ def makeFilesListORF(files, filesList):
 	
 	return trinityfiles
 
-def trimSequences(header, stringency, trinityfiles):
+def trimSequences(header, trinityfiles, arguments):
+	stringency = arguments.g
 	for file in trinityfiles:
 		os.makedirs(header + "/" + file) 
 		subprocess.call(['trim_galore --stringency '+stringency+' --dont_gzip --output_dir ' + header + "/" + file + " " +str(file) +".fastq"], shell=True) # trim off sequenceing adapters
@@ -157,12 +158,15 @@ def trimSequences(header, stringency, trinityfiles):
 		subprocess.call(['rm '+ header + "/"+ file+"/"+str(file)+'_trimmed.fq'], shell=True) # removes intermediate trimmed file 
 
 
-def trinity(header, min_pro_len, trinityfiles, max_memory_trinity):
+def trinity(header, trinityfiles, arguments):
+	max_memory_trinity  =arguments.mem
+	min_pro_len = arguments.minp
 	for file in trinityfiles:
 		subprocess.call(['Trinity --seqType fq --max_memory '+max_memory_trinity+'G --full_cleanup --single ' + header + "/"+ file+"/"+str(file) +'_trimmed2.fq ' +'--min_contig_length ' + str(min_pro_len*3) + ' --no_normalize_reads --output ' + header+"/"+file+"_Trinity/"], shell=True)
 		
 
-def findORFs(header, min_pro_len, trinityfiles):
+def findORFs(header, trinityfiles, arguments):
+	min_pro_len = arguments.minp
 	for file in trinityfiles:
 		record_dict = SeqIO.index(header+ "/" + file+"_Trinity.Trinity.fasta","fasta") # "parses" a fasta file, creating a dictionary-like object of sequences. not everything is kept in memeory. instead it just records where each record is within the file. parses on demand. 
 		# the key is the dictionary is the ">" line in the fasta file
@@ -281,7 +285,9 @@ def findORFs(header, min_pro_len, trinityfiles):
 		fixSeqRecord(header + "/"+header+"_"+file+"_orf.fa")
 		fixSeqRecord(header + "/"+header+"_"+file+'_orf_trans.fa')
 
-def blastCDHIT(header, trinityfiles, vsgdDbName, seqIdenThresh):
+def blastCDHIT(header, trinityfiles, arguments):
+	vsgdDbName = arguments.vsgdb
+	seqIdenThresh = arguments.sit
 	for file in trinityfiles:
 		filename = header + "/"+header+"_"+file+"_orf"
 		print ' *****analyzing '+filename+".fa"+' *****'
@@ -302,11 +308,14 @@ def blastCDHIT(header, trinityfiles, vsgdDbName, seqIdenThresh):
 
 
 
-def makeMulto(header, trinityfiles, path, numMismatch, numCPU, rmulto):
+def makeMulto(header, trinityfiles, arguments):
+	path = arguments.p
+	rmulto = arguments.rmulto
+	numCPU = arguments.cpu
+	numMismatch = arguments.v
 	currDir = os.getcwd()
 	print currDir	
-	os.path.expanduser('~')
-	os.chdir(os.path.expanduser('~'))
+	os.chdir(path)
 	print os.getcwd()
 	os.chdir('MULTo1.0')
 
