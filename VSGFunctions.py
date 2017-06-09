@@ -106,6 +106,32 @@ def blast_sort(v,n,s):
     outfile.close
     scorefile.close
 
+def blast_sort_noNON(v,s):
+    #v = vsg xml file
+    #s = sequence file, contigs from blast searches
+    result_handle = open(v)
+    blast_records = NCBIXML.parse(result_handle) # returns an iterator of the blast results
+    record_dict = SeqIO.index(s,"fasta")
+    
+    outfile = open(s.split('.')[0]+'_VSGs.fa', 'w')
+    scorefile = open(s.split('.')[0]+'_VSGs_scores.txt', 'w')
+    
+    hit_list = [] # list of VSGs we have found! 
+
+    print 'VSG hits! - maybe?'
+    
+    for blast_record in blast_records:
+    	for alignment in blast_record.alignments:
+    		for hsp in alignment.hsps:
+    			if hsp.expect < 1.0e-10: # hsp.expect = e value for the hsp value, the lower the e value, the more statistically significant 
+    				if not blast_record.query in hit_list: # if this query hasn't already been added to the hit list, add it now
+	    				hit_list.append(str(blast_record.query))											# percent query aligned										# percent identity
+	    				scorefile.write(str(blast_record.query)+'\t'+str(alignment.title)+'\t'+str((100.0 * hsp.identities) / blast_record.query_letters)+'\t'+str((100.0 * hsp.identities) / alignment.length)+'\t'+str(alignment.length)+'\t'+str(s.split('.')[0])+'\n')
+	    				SeqIO.write(record_dict[blast_record.query], outfile, "fasta")
+                    
+    outfile.close
+    scorefile.close
+
 def makeFilesList(files, filesList):
 	if filesList != "": # take in a text file with the sequence file dir/name
 		file = open(filesList,"r")
@@ -126,53 +152,6 @@ def makeFilesList(files, filesList):
 	
 	return trinityfiles
 
-def makeFilesListTrimmed(files, filesList):
-	if filesList != "": # take in a text file with the sequence file dir/name
-		file = open(filesList,"r")
-		seqfiles = []
-		for line in file.readlines():
-			seqfiles.append(line)
-		files = seqfiles
-	
-	trinityfiles = []
-	
-	for file in files:
-		filenameS = file.split('_trimmed2')[0]
-		trinityfiles.append(filenameS)
-	
-	return trinityfiles
-	
-def makeFilesListTrinity(files, filesList):
-	if filesList != "": # take in a text file with the sequence file dir/name
-		file = open(filesList,"r")
-		seqfiles = []
-		for line in file.readlines():
-			seqfiles.append(line)
-		files = seqfiles
-	
-	trinityfiles = []
-	
-	for file in files:
-		filenameS = file.split('_Trinity_Trinity')[0]
-		trinityfiles.append(filenameS)
-	
-	return trinityfiles
-
-def makeFilesListORF(files, filesList):
-	if filesList != "": # take in a text file with the sequence file dir/name
-		file = open(filesList,"r")
-		seqfiles = []
-		for line in file.readlines():
-			seqfiles.append(line)
-		files = seqfiles
-	
-	trinityfiles = []
-	
-	for file in files:
-		filenameS = file.split('_orf')[0]
-		trinityfiles.append(filenameS)
-	
-	return trinityfiles
 
 def trimSequences(header, trinityfiles, arguments):
 	stringency = arguments.g
@@ -321,11 +300,13 @@ def blastCDHIT(header, trinityfiles, arguments):
 		#blast VSG
 		subprocess.call(['blastn -db '+vsgdDbName+' -query '+filename+'.fa -outfmt 5 -out '+filename+'.xml'], shell=True)
 		#blast nonVSG
-		subprocess.call(['blastn -db NOTvsgs -query '+filename+'.fa -outfmt 5 -out '+filename+'_nonVSG.xml'], shell=True)
-		#get all the blast results which are for ONLY VSGs, get rid of hits which are VSG-similar but not vsgs
-		blast_sort(filename+'.xml', filename+'_nonVSG.xml',filename+".fa") # the _VSGs.fa file is produced from this
+		if arguments.Ndb == 0:
+			subprocess.call(['blastn -db NOTvsgs -query '+filename+'.fa -outfmt 5 -out '+filename+'_nonVSG.xml'], shell=True)
+			#get all the blast results which are for ONLY VSGs, get rid of hits which are VSG-similar but not vsgs
+			blast_sort(filename+'.xml', filename+'_nonVSG.xml',filename+".fa") # the _VSGs.fa file is produced from this
 		# cdhit merge, clusters VSGs which are similar into one, so that we dont have replicates of VSGs
-		#subprocess.call(['cd-hit-est -i '+filename+'_VSGs.fa '+' -o '+filename+'_merged.fa -d 0 -c 0.9 -n 8 -r 1 -G 1 -g 1 -b 20 -s 0.0 -aL 0.0 '], shell=True)
+		else:
+			blast_sort_noNON(filename+'.xml',filename+".fa")
 
 	all_VSGs = open(os.path.join(header, header+'_orf_VSGs.fa'), 'w')
 	for file in trinityfiles:

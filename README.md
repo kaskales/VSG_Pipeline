@@ -1,7 +1,29 @@
 # VSG_Pipeline
 
-$ python Step1_.py <fasta file> <mimimum protein length> <contig output file name> <ORF output file name>
+Organization Structure
 
-creates 4 files, both the input names for the output files should be .fa files 
+To start:
 
-$ pythong Step2_.py -i <list of fasta files AKA, orf.fa file from previous step>
+Current Directory{
+	Pipeline.py
+	VSGFunctions.py
+	[SequencingFile1].fastq
+	[SequencingFile2].fastq
+}
+
+When Finished:
+
+Current Directory{
+	Pipeline.py
+	VSGFunctions.py
+	[SequencingFile1].fastq
+	[SequencingFile2].fastq
+	[Y-M-D-H_M]-[OptionalDescriptiveHeaderNames]{
+	[SequencingFile1]{
+			[SequencingFile1]_trimmed2.fq
+		}
+	[SequencingFile2]{
+			[SequencingFile2]_trimmed2.fq
+		}
+	}
+}
