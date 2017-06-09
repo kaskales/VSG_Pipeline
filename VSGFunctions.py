@@ -9,6 +9,31 @@ import argparse
 import time
 import os
 
+#('-s', nargs= '+',metavar='listed sequence files to be put through the pipeline, fq', action="store", dest="s")
+#('-st',metavar='text file with .fastq names of sequence files to be put through the pipeline, fq', action="store", dest="st", default='')
+#('-d', help='additional descriptive terms to name your run', action="store", dest='d', default='')
+# trimming setting
+#('-g', metavar='stringency for trim galore', action ="store", dest = "g", default="3") 
+# trinity settings
+#('-minp', metavar='minimum protein length you are filtering for', action ="store", type=int, dest = "minp", default=300) 
+#('-mem', metavar='max memory allocation for trinity', action ="store", dest = "mem", default="10") 
+#('-cpu', help='number of processors to use', action="store", dest='cpu', default='2')
+# Blast settings
+#('-vsgdb', metavar='name of the vsg database to blast against', action ="store", dest = "vsgdb", default="tb427_vsgs")
+# cd-hit-est parameters
+#('-sit', metavar='sequence identiy threshold - how much the alignment has to match, percentage. value is 0.0 through 1.0 ', action ="store", dest = "sit", default=".98")
+# MULTO settings
+#('-p', help='path to MULTo1.0 folder. default is /Users/mugnierlab/, please dont use "~/", python doesnt like this in the path', action="store", dest='p', default='/Users/mugnierlab/') # default assumes MULTo is in your home dir
+#('-v', help='number of mismatches allowed', action="store", dest='v', default='2')
+#('-remakeMulto', help='name of the multo files, typically same as header, if default it will make MULTo files. otherwise enter name of multo files to be reused', action="store", dest='rmulto', default='')
+
+#where the pipeline will start
+#('-start', help='the step you want the pipeline to start at. 0 = input is raw untrimmed data. 1 = start after trimming, input is already trimmed. 2 = Start after Trinity, input are trinity files. 3 = start after finding ORF, input are ORFs. 4= Start after BLAST/cd-hit-est, input are VSG/ORFs. 5 = continues till the end to MULTo', type=int, action="store", dest='start', default=0)
+#('-header', help='input header variable in the format of Y-m-d-H_M , if it doesnot have ', action="store", dest='head', default='')
+
+#where the pipeline will stop
+#('-stop', help='the step you want the pipeline to stop at. 1 = stop after trimming. 2 = Stop after Trinity. 3= stop after finding ORF. 4= Stop after BLAST, 5 = continues till the end to MULTo', type=int, action="store", dest='stop', default=5)
+
 
 def fixSeqRecord(file): # gets rid of not usefull stuff in the file comment ">" section 
 	infile = open(file, 'r')
@@ -162,7 +187,7 @@ def trinity(header, trinityfiles, arguments):
 	max_memory_trinity  =arguments.mem
 	min_pro_len = arguments.minp
 	for file in trinityfiles:
-		subprocess.call(['Trinity --seqType fq --max_memory '+max_memory_trinity+'G --full_cleanup --single ' + header + "/"+ file+"/"+str(file) +'_trimmed2.fq ' +'--min_contig_length ' + str(min_pro_len*3) + ' --no_normalize_reads --output ' + header+"/"+file+"_Trinity/"], shell=True)
+		subprocess.call(['Trinity --seqType fq --max_memory '+max_memory_trinity+'G --full_cleanup --single ' + header + "/"+ file+"/"+str(file) +'_trimmed2.fq --CPU '+arguments.cpu+' --min_contig_length ' + str(min_pro_len*3) + ' --no_path_merging --no_normalize_reads --output ' + header+"/"+file+"_Trinity/"], shell=True)
 		
 
 def findORFs(header, trinityfiles, arguments):
@@ -288,6 +313,8 @@ def findORFs(header, trinityfiles, arguments):
 def blastCDHIT(header, trinityfiles, arguments):
 	vsgdDbName = arguments.vsgdb
 	seqIdenThresh = arguments.sit
+	max_memory_trinity  =int(arguments.mem) * 1000
+	numCPU = arguments.cpu
 	for file in trinityfiles:
 		filename = header + "/"+header+"_"+file+"_orf"
 		print ' *****analyzing '+filename+".fa"+' *****'
@@ -304,7 +331,7 @@ def blastCDHIT(header, trinityfiles, arguments):
 	for file in trinityfiles:
 		subprocess.call(['cat '+header + "/"+header+"_"+file+"_orf_VSGs.fa >> " +header + "/"+header+"_orf_VSGs.fa"], shell=True) # concatinates all the files for MULTo
 
-	subprocess.call(['cd-hit-est -i '+header+"/"+header+'_orf_VSGs.fa '+' -o '+header+"/"+header+'_orf_VSGs_merged.fa -d 0 -c ' + seqIdenThresh + ' -n 8 -G 1 -g 1 -s 0.0 -aL 0.0 '], shell=True)
+	subprocess.call(['cd-hit-est -i '+header+"/"+header+'_orf_VSGs.fa '+' -o '+header+"/"+header+'_orf_VSGs_merged.fa -d 0 -c ' + seqIdenThresh + ' -n 8 -G 1 -g 1 -s 0.0 -aL 0.0 -M '+str(max_memory_trinity )+' -T ' + numCPU], shell=True)
 
 
 
@@ -362,7 +389,7 @@ def makeMulto(header, trinityfiles, arguments):
 	# we are taking our quality trimmed and adaptercut sequence file (from step before running trinity)
 	# and we take all these trimmed sequence fragments and align them to the de novo assembled genome
 	for file in trinityfiles:
-		subprocess.call(['bowtie -v '+numMismatch+' -m 1 -p 6 -S -a --strata --best '+str(path)+'MULTo1.0/files/tbb/tb'+rmulto+'/bowtie_indexes/tb'+rmulto+'_genome/tb'+rmulto+'_no_random '+header+'/'+ file  +'/'+file  + '_trimmed2.fq '+header + "/" + file+'_align.sam'], shell=True)
+		subprocess.call(['bowtie -v '+numMismatch+' -m 1 -p '+numCPU+' -S -a --strata --best '+str(path)+'MULTo1.0/files/tbb/tb'+rmulto+'/bowtie_indexes/tb'+rmulto+'_genome/tb'+rmulto+'_no_random '+header+'/'+ file  +'/'+file  + '_trimmed2.fq '+header + "/" + file+'_align.sam'], shell=True)
 		subprocess.call(['python '+str(path)+'MULTo1.0/src/rpkmforgenes.py -i '+header + "/"+file+'_align.sam -samu -bedann -a '+str(path)+'MULTo1.0/files/tbb/tb'+rmulto+'/fastaFiles/annotationFiles/chr1.bed -u '+str(path)+'MULTo1.0/files/tbb/tb'+rmulto+'/MULfiles/tb'+rmulto+'_20-255/MULTo_files -o '+header + "/"+ file+'_MULTo.txt'], shell=True)
 
 

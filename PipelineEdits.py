@@ -23,18 +23,18 @@ parser = argparse.ArgumentParser()
 
 # arguments about input files and naming
 parser.add_argument('-s', nargs= '+',metavar='listed sequence files to be put through the pipeline, fq', action="store", dest="s")
-parser.add_argument('-st',metavar='text file with names of sequence files to be put through the pipeline, fq', action="store", dest="st", default='')
+parser.add_argument('-st',metavar='text file with .fastq names of sequence files to be put through the pipeline, fq', action="store", dest="st", default='')
 parser.add_argument('-d', help='additional descriptive terms to name your run', action="store", dest='d', default='')
 # trimming setting
 parser.add_argument('-g', metavar='stringency for trim galore', action ="store", dest = "g", default="3") 
 # trinity settings
 parser.add_argument('-minp', metavar='minimum protein length you are filtering for', action ="store", type=int, dest = "minp", default=300) 
-parser.add_argument('-mem', metavar='max memory allocation for trinity', action ="store", dest = "mem", default="10") 
-parser.add_argument('-cpu', help='number of processors', action="store", dest='cpu', default='2')
+parser.add_argument('-mem', metavar='max memory allocation for trinity, G', action ="store", dest = "mem", default="10") 
+parser.add_argument('-cpu', help='number of processors to use', action="store", dest='cpu', default='2')
 # Blast settings
-parser.add_argument('-vsgdb', metavar='name of the vsg database', action ="store", dest = "vsgdb", default="tb427_vsgs")
+parser.add_argument('-vsgdb', metavar='name of the vsg database to blast against', action ="store", dest = "vsgdb", default="tb427_vsgs")
 # cd-hit-est parameters
-parser.add_argument('-sit', metavar='sequence identiy threshold - how much the alignment has to match. value is 0.0 through 1.0 ', action ="store", dest = "sit", default=".98")
+parser.add_argument('-sit', metavar='sequence identiy threshold - how much the alignment has to match, percentage. value is 0.0 through 1.0 ', action ="store", dest = "sit", default=".98")
 # MULTO settings
 parser.add_argument('-p', help='path to MULTo1.0 folder. default is /Users/mugnierlab/, please dont use "~/", python doesnt like this in the path', action="store", dest='p', default='/Users/mugnierlab/') # default assumes MULTo is in your home dir
 parser.add_argument('-v', help='number of mismatches allowed', action="store", dest='v', default='2')
@@ -114,7 +114,7 @@ elif arguments.start == 4:
 	if arguments.stop > 4:
 		vsgf.makeMulto(header, trinityfiles, arguments)
 else:
-	print("Bad start argument, double check the number you entered")
+	print("Bad start argument, double check the start number you entered")
 
 
 
