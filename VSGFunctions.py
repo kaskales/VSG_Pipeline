@@ -60,75 +60,62 @@ def addSeqRecord_RC(recordRD, start, end, count):
 	ORF_outfile.write('>'+str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+'_RC_' + filename +'\n'+str(sequence)+'\n')
 	SeqIO.write(SeqRecord(sequence.translate(), id=str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+'_RC_' + filename), trans_out_file, "fasta")
 	
-def blast_sort(v,n,s):
+def blast_sort(v,n,s,Ndb):
     #v = vsg xml file
     #n = nonvsg xmlfile
     #s = sequence file, contigs from blast searches
     result_handle = open(v)
-    nonVSGresult_handle = open(n)
+    
     blast_records = NCBIXML.parse(result_handle) # returns an iterator of the blast results
     record_dict = SeqIO.index(s,"fasta")
     
     outfile = open(s.split('.')[0]+'_VSGs.fa', 'w')
     scorefile = open(s.split('.')[0]+'_VSGs_scores.txt', 'w')
 
-    blast_records_nonVSG = NCBIXML.parse(nonVSGresult_handle)
-    blast_record_nonVSG = blast_records_nonVSG.next()
-    
-    hit_list = [] # list of VSGs we have found! 
-    exclude_list = []
-        
-    print 'Now looking for non-VSG transcripts...'
-    
-    for blast_record_nonVSG in blast_records_nonVSG:
-    	for alignment in blast_record_nonVSG.alignments:
-    		for hsp in alignment.hsps: 
-    			percent_identity = (100.0 * hsp.identities) / alignment.length # hsp.identities is a tuple(bp matches, total bp in seq) to give percent match of sequence, percent identity is # of bp
-    			percent_query_identity = (100.0 * hsp.identities) / blast_record_nonVSG.query_letters
-    			#print blast_record_nonVSG.query+'\t'+alignment.title+'\t'+str(percent_identity)+'\t'+str(percent_query_identity)+'\t'
-    			if (percent_query_identity > 30 and hsp.identities > 300) or (percent_identity > 90):
-    				if not blast_record_nonVSG.query in exclude_list:
-    					exclude_list.append(str(blast_record_nonVSG.query))
-    					#print 'nonVSG hit!'+'\t'+str(blast_record_nonVSG.query)+' \t '+str(alignment.title)
+    hit_list = []
 
-    print 'VSG hits! - maybe?'
-    
-    for blast_record in blast_records:
-    	for alignment in blast_record.alignments:
-    		for hsp in alignment.hsps:
-    			if hsp.expect < 1.0e-10: # hsp.expect = e value for the hsp value, the lower the e value, the more statistically significant 
-    				if not blast_record.query in hit_list: # if this query hasn't already been added to the hit list, add it now
-    					if not blast_record.query in exclude_list: # if the query isn't a fake VSG hit, add it now!
-	    					hit_list.append(str(blast_record.query))											# percent query aligned										# percent identity
-	    					scorefile.write(str(blast_record.query)+'\t'+str(alignment.title)+'\t'+str((100.0 * hsp.identities) / blast_record.query_letters)+'\t'+str((100.0 * hsp.identities) / alignment.length)+'\t'+str(alignment.length)+'\t'+str(s.split('.')[0])+'\n')
-	    					SeqIO.write(record_dict[blast_record.query], outfile, "fasta")
-                    
-    outfile.close
-    scorefile.close
+    if Ndb == 0: # blasted against nonVSG database
+    	nonVSGresult_handle = open(n)
+	    blast_records_nonVSG = NCBIXML.parse(nonVSGresult_handle)
+	    blast_record_nonVSG = blast_records_nonVSG.next()
+	     # list of VSGs we have found! 
+	    exclude_list = []
+	        
+	    print 'Now looking for non-VSG transcripts...'
+	    
+	    for blast_record_nonVSG in blast_records_nonVSG:
+	    	for alignment in blast_record_nonVSG.alignments:
+	    		for hsp in alignment.hsps: 
+	    			percent_identity = (100.0 * hsp.identities) / alignment.length # hsp.identities is a tuple(bp matches, total bp in seq) to give percent match of sequence, percent identity is # of bp
+	    			percent_query_identity = (100.0 * hsp.identities) / blast_record_nonVSG.query_letters
+	    			#print blast_record_nonVSG.query+'\t'+alignment.title+'\t'+str(percent_identity)+'\t'+str(percent_query_identity)+'\t'
+	    			if (percent_query_identity > 30 and hsp.identities > 300) or (percent_identity > 90):
+	    				if not blast_record_nonVSG.query in exclude_list:
+	    					exclude_list.append(str(blast_record_nonVSG.query))
+	    					#print 'nonVSG hit!'+'\t'+str(blast_record_nonVSG.query)+' \t '+str(alignment.title)
 
-def blast_sort_noNON(v,s):
-    #v = vsg xml file
-    #s = sequence file, contigs from blast searches
-    result_handle = open(v)
-    blast_records = NCBIXML.parse(result_handle) # returns an iterator of the blast results
-    record_dict = SeqIO.index(s,"fasta")
-    
-    outfile = open(s.split('.')[0]+'_VSGs.fa', 'w')
-    scorefile = open(s.split('.')[0]+'_VSGs_scores.txt', 'w')
-    
-    hit_list = [] # list of VSGs we have found! 
+	    print 'VSG hits! - maybe?'
+	    
+	    for blast_record in blast_records:
+	    	for alignment in blast_record.alignments:
+	    		for hsp in alignment.hsps:
+	    			if hsp.expect < 1.0e-10: # hsp.expect = e value for the hsp value, the lower the e value, the more statistically significant 
+	    				if not blast_record.query in hit_list: # if this query hasn't already been added to the hit list, add it now
+	    					if not blast_record.query in exclude_list: # if the query isn't a fake VSG hit, add it now!
+		    					hit_list.append(str(blast_record.query))											# percent query aligned										# percent identity
+		    					scorefile.write(str(blast_record.query)+'\t'+str(alignment.title)+'\t'+str((100.0 * hsp.identities) / blast_record.query_letters)+'\t'+str((100.0 * hsp.identities) / alignment.length)+'\t'+str(alignment.length)+'\t'+str(s.split('.')[0])+'\n')
+		    					SeqIO.write(record_dict[blast_record.query], outfile, "fasta")
+    else: # didn't blast against nonVSG database
+    	for blast_record in blast_records:
+	    	for alignment in blast_record.alignments:
+	    		for hsp in alignment.hsps:
+	    			if hsp.expect < 1.0e-10: # hsp.expect = e value for the hsp value, the lower the e value, the more statistically significant 
+	    				if not blast_record.query in hit_list: # if this query hasn't already been added to the hit list, add it now
+		    				hit_list.append(str(blast_record.query))											# percent query aligned										# percent identity
+		    				scorefile.write(str(blast_record.query)+'\t'+str(alignment.title)+'\t'+str((100.0 * hsp.identities) / blast_record.query_letters)+'\t'+str((100.0 * hsp.identities) / alignment.length)+'\t'+str(alignment.length)+'\t'+str(s.split('.')[0])+'\n')
+		    				SeqIO.write(record_dict[blast_record.query], outfile, "fasta")
 
-    print 'VSG hits! - maybe?'
-    
-    for blast_record in blast_records:
-    	for alignment in blast_record.alignments:
-    		for hsp in alignment.hsps:
-    			if hsp.expect < 1.0e-10: # hsp.expect = e value for the hsp value, the lower the e value, the more statistically significant 
-    				if not blast_record.query in hit_list: # if this query hasn't already been added to the hit list, add it now
-	    				hit_list.append(str(blast_record.query))											# percent query aligned										# percent identity
-	    				scorefile.write(str(blast_record.query)+'\t'+str(alignment.title)+'\t'+str((100.0 * hsp.identities) / blast_record.query_letters)+'\t'+str((100.0 * hsp.identities) / alignment.length)+'\t'+str(alignment.length)+'\t'+str(s.split('.')[0])+'\n')
-	    				SeqIO.write(record_dict[blast_record.query], outfile, "fasta")
-                    
+
     outfile.close
     scorefile.close
 
@@ -157,8 +144,8 @@ def trimSequences(header, trinityfiles, arguments):
 	stringency = arguments.g
 	for file in trinityfiles:
 		os.makedirs(header + "/" + file) 
-		subprocess.call(['trim_galore --stringency '+stringency+' --dont_gzip --output_dir ' + header + "/" + file + " " +str(file) +".fastq"], shell=True) # trim off sequenceing adapters
-		subprocess.call(['cutadapt -b ATTTAGGTGACACTATAG -b CTATAGTGTCACCTAAAT '+ header + "/"+ file+"/"+str(file)+'_trimmed.fq > '+ header + "/"+file + "/"+str(file)+'_trimmed2.fq'], shell=True) # trim off SP6 sequences (from VSG PCR step)
+		subprocess.call(['trim_galore --stringency '+stringency+' --length '+arguments.trim+' --dont_gzip --output_dir ' + header + "/" + file + " " +str(file) +".fastq"], shell=True) # trim off sequenceing adapters
+		subprocess.call(['cutadapt -m '+arguments.trim+' -b ATTTAGGTGACACTATAG -b CTATAGTGTCACCTAAAT '+ header + "/"+ file+"/"+str(file)+'_trimmed.fq > '+ header + "/"+file + "/"+str(file)+'_trimmed2.fq'], shell=True) # trim off SP6 sequences (from VSG PCR step)
 		subprocess.call(['rm '+ header + "/"+ file+"/"+str(file)+'_trimmed.fq'], shell=True) # removes intermediate trimmed file 
 
 
@@ -186,11 +173,13 @@ def findORFs(header, trinityfiles, arguments):
 		filename = file # takes only the name of the file, this will be added to the ORF description, so we know where it came from
 		for record in record_dict: # iterates through the sequences
 			#print record_dict[record]
+			
 			if len(record_dict[record].seq) > ((min_pro_len)*3): # if the orf length is > 3 times the specified protein length 
 				count=1 
 				for strand, nuc in [(+1, record_dict[record].seq), (-1,record_dict[record].seq.reverse_complement())]: # get a list of possible ORF translations, loops twice, each tuple
 					for frame in [0,1,2]: #loops 3 times, frame will start at 0, 1, and 2
-
+						wholeAdded = False # will allow for the read to be put in 3 times(once for each strand)
+						
 						trans = nuc[frame:].translate() # translates the sequence nuc[frame] into protein sequence for the current frame
 						# find a way for it to stop at first stop codon
 						trans_len = len(trans) # gets length of the protein sequence
@@ -228,8 +217,10 @@ def findORFs(header, trinityfiles, arguments):
 									trans_end = trans.find("*", trans_start) # will start checking the orf at that first found start codon, sets new trans_end to stop codon after the start	
 							else: # start codon exists, but there is no stop codon anywhere! :O
 							# this portion of the code will take the entire thing as an ORF, we are being generous
-								addSeqRecord_RC(record_dict[record], 0, seq_len, count)
-								count += 1
+								if wholeAdded == False: # won't add if the entire strand was already added
+									wholeAdded = True
+									addSeqRecord_RC(record_dict[record], frame, seq_len, count)
+									count += 1
 							# this part isn't generous and only takes from the start codon till the end of the sequence
 		#						if trans_len-trans_start > min_pro_len: # is the remaining protein segment after the start codon long enought to be a protein?
 		#							print "D"
@@ -250,8 +241,11 @@ def findORFs(header, trinityfiles, arguments):
 								count += 1	
 							trans_start = trans_len # won't search for more, since there aren't any start codons anywhere
 						else: # there are no start or stop codons anywhere?!
-							addSeqRecord_RC(record_dict[record], 0, seq_len, count)
-							trans_start = trans_len
+							if wholeAdded == False:
+								wholeAdded == True
+								addSeqRecord_RC(record_dict[record], frame, seq_len, count)
+								trans_start = trans_len
+								count += 1	
 						
 						trans_max = trans_len - min_pro_len # farthest a codon can be before it's below min protein length
 
@@ -302,11 +296,10 @@ def blastCDHIT(header, trinityfiles, arguments):
 		#blast nonVSG
 		if arguments.Ndb == 0:
 			subprocess.call(['blastn -db NOTvsgs -query '+filename+'.fa -outfmt 5 -out '+filename+'_nonVSG.xml'], shell=True)
-			#get all the blast results which are for ONLY VSGs, get rid of hits which are VSG-similar but not vsgs
-			blast_sort(filename+'.xml', filename+'_nonVSG.xml',filename+".fa") # the _VSGs.fa file is produced from this
+		#get all the blast results which are for ONLY VSGs, get rid of hits which are VSG-similar but not vsgs
+		blast_sort(filename+'.xml', filename+'_nonVSG.xml',filename+".fa", arguments.Ndb) # the _VSGs.fa file is produced from this
 		# cdhit merge, clusters VSGs which are similar into one, so that we dont have replicates of VSGs
-		else:
-			blast_sort_noNON(filename+'.xml',filename+".fa")
+
 
 	all_VSGs = open(os.path.join(header, header+'_orf_VSGs.fa'), 'w')
 	for file in trinityfiles:

@@ -25,29 +25,27 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-s', nargs= '+',metavar='listed sequence files to be put through the pipeline, fq', action="store", dest="s")
 parser.add_argument('-st',metavar='text file with .fastq names of sequence files to be put through the pipeline, fq', action="store", dest="st", default='')
 parser.add_argument('-d', help='additional descriptive terms to name your run', action="store", dest='d', default='')
+parser.add_argument('-stderr', help='0, direct standard error to an output file. 1, output to console', action="store", dest='stderr', default=0)
 # trimming setting
 parser.add_argument('-g', metavar='stringency for trim galore', action ="store", dest = "g", default="3") 
+parser.add_argument('-trim', metavar='minimum length of read for trimming', action ="store", dest = "trim", default="50") 
 # trinity settings
 parser.add_argument('-minp', metavar='minimum protein length you are filtering for', action ="store", type=int, dest = "minp", default=300) 
 parser.add_argument('-mem', metavar='max memory allocation for trinity, G', action ="store", dest = "mem", default="10") 
 parser.add_argument('-cpu', help='number of processors to use', action="store", dest='cpu', default='2')
 # Blast settings
 parser.add_argument('-vsgdb', metavar='name of the vsg database to blast against', action ="store", dest = "vsgdb", default="tb427_vsgs")
-parser.add_argument('-Ndb', metavar='0 default, blast against NonVSG. 1 to NOT blast against nonVSG database', action ="store", type=int, dest = "Ndb", default=0)
-
+parser.add_argument('-Ndb', metavar='0 default, blast against NonVSG. >=1 to NOT blast against nonVSG database', action ="store", type=int, dest = "Ndb", default=0)
 # cd-hit-est parameters
 parser.add_argument('-sit', metavar='sequence identiy threshold - how much the alignment has to match, percentage. value is 0.0 through 1.0 ', action ="store", dest = "sit", default=".98")
 parser.add_argument('-t', metavar='number of threads for cd-hit-est to use, 0 default(all CPU will be used)', action ="store", dest = "t", default="0")
-
 # MULTO settings
 parser.add_argument('-p', help='path to MULTo1.0 folder. default is /Users/mugnierlab/, please dont use "~/", python doesnt like this in the path', action="store", dest='p', default='/Users/mugnierlab/') # default assumes MULTo is in your home dir
 parser.add_argument('-v', help='number of mismatches allowed', action="store", dest='v', default='2')
 parser.add_argument('-remakeMulto', help='name of the multo files, typically same as header, if default it will make MULTo files. otherwise enter name of multo files to be reused', action="store", dest='rmulto', default='')
-
 #where the pipeline will start
 parser.add_argument('-start', help='the step you want the pipeline to start at. 0 = input is raw untrimmed data. 1 = start after trimming, input is already trimmed. 2 = Start after Trinity, input are trinity files. 3 = start after finding ORF, input are ORFs. 4= Start after BLAST/cd-hit-est, input are VSG/ORFs. 5 = continues till the end to MULTo', type=int, action="store", dest='start', default=0)
 parser.add_argument('-header', help='input header variable in the format of Y-m-d-H_M , include descriptive headers too ', action="store", dest='head', default='')
-
 #where the pipeline will stop
 parser.add_argument('-stop', help='the step you want the pipeline to stop at. 1 = stop after trimming. 2 = Stop after Trinity. 3= stop after finding ORF. 4= Stop after BLAST, 5 = continues till the end to MULTo', type=int, action="store", dest='stop', default=5)
 
