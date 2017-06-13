@@ -34,91 +34,6 @@ import os
 #where the pipeline will stop
 #('-stop', help='the step you want the pipeline to stop at. 1 = stop after trimming. 2 = Stop after Trinity. 3= stop after finding ORF. 4= Stop after BLAST, 5 = continues till the end to MULTo', type=int, action="store", dest='stop', default=5)
 
-
-def fixSeqRecord(file): # gets rid of not usefull stuff in the file comment ">" section 
-	infile = open(file, 'r')
-	outfile = open(str(file.split('.')[0])+'_clean.fa', 'w')
-	for line in infile:
-		if '>' in line:
-			names = line.split()
-			for name in names:
-				if name[0] == '>':
-					outfile.write(name+'\n')	
-		else: 
-			outfile.write(line)
-		
-	outfile.close()
-	infile.close()
-
-def addSeqRecord(recordRD, start, end, count):
-	sequence = recordRD.seq[start:end]
-	ORF_outfile.write('>'+str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+"_" + filename + '\n'+str(sequence)+'\n')
-	SeqIO.write(SeqRecord(sequence.translate(), id=str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+"_" + filename), trans_out_file, "fasta")
-
-def addSeqRecord_RC(recordRD, start, end, count):
-	sequence = recordRD.seq[start:end].reverse_complement()
-	ORF_outfile.write('>'+str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+'_RC_' + filename +'\n'+str(sequence)+'\n')
-	SeqIO.write(SeqRecord(sequence.translate(), id=str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+'_RC_' + filename), trans_out_file, "fasta")
-	
-def blast_sort(v,n,s,Ndb):
-    #v = vsg xml file
-    #n = nonvsg xmlfile
-    #s = sequence file, contigs from blast searches
-    result_handle = open(v)
-    
-    blast_records = NCBIXML.parse(result_handle) # returns an iterator of the blast results
-    record_dict = SeqIO.index(s,"fasta")
-    
-    outfile = open(s.split('.')[0]+'_VSGs.fa', 'w')
-    scorefile = open(s.split('.')[0]+'_VSGs_scores.txt', 'w')
-
-    hit_list = []
-
-    if Ndb == 0: # blasted against nonVSG database
-    	nonVSGresult_handle = open(n)
-	    blast_records_nonVSG = NCBIXML.parse(nonVSGresult_handle)
-	    blast_record_nonVSG = blast_records_nonVSG.next()
-	     # list of VSGs we have found! 
-	    exclude_list = []
-	        
-	    print 'Now looking for non-VSG transcripts...'
-	    
-	    for blast_record_nonVSG in blast_records_nonVSG:
-	    	for alignment in blast_record_nonVSG.alignments:
-	    		for hsp in alignment.hsps: 
-	    			percent_identity = (100.0 * hsp.identities) / alignment.length # hsp.identities is a tuple(bp matches, total bp in seq) to give percent match of sequence, percent identity is # of bp
-	    			percent_query_identity = (100.0 * hsp.identities) / blast_record_nonVSG.query_letters
-	    			#print blast_record_nonVSG.query+'\t'+alignment.title+'\t'+str(percent_identity)+'\t'+str(percent_query_identity)+'\t'
-	    			if (percent_query_identity > 30 and hsp.identities > 300) or (percent_identity > 90):
-	    				if not blast_record_nonVSG.query in exclude_list:
-	    					exclude_list.append(str(blast_record_nonVSG.query))
-	    					#print 'nonVSG hit!'+'\t'+str(blast_record_nonVSG.query)+' \t '+str(alignment.title)
-
-	    print 'VSG hits! - maybe?'
-	    
-	    for blast_record in blast_records:
-	    	for alignment in blast_record.alignments:
-	    		for hsp in alignment.hsps:
-	    			if hsp.expect < 1.0e-10: # hsp.expect = e value for the hsp value, the lower the e value, the more statistically significant 
-	    				if not blast_record.query in hit_list: # if this query hasn't already been added to the hit list, add it now
-	    					if not blast_record.query in exclude_list: # if the query isn't a fake VSG hit, add it now!
-		    					hit_list.append(str(blast_record.query))											# percent query aligned										# percent identity
-		    					scorefile.write(str(blast_record.query)+'\t'+str(alignment.title)+'\t'+str((100.0 * hsp.identities) / blast_record.query_letters)+'\t'+str((100.0 * hsp.identities) / alignment.length)+'\t'+str(alignment.length)+'\t'+str(s.split('.')[0])+'\n')
-		    					SeqIO.write(record_dict[blast_record.query], outfile, "fasta")
-    else: # didn't blast against nonVSG database
-    	for blast_record in blast_records:
-	    	for alignment in blast_record.alignments:
-	    		for hsp in alignment.hsps:
-	    			if hsp.expect < 1.0e-10: # hsp.expect = e value for the hsp value, the lower the e value, the more statistically significant 
-	    				if not blast_record.query in hit_list: # if this query hasn't already been added to the hit list, add it now
-		    				hit_list.append(str(blast_record.query))											# percent query aligned										# percent identity
-		    				scorefile.write(str(blast_record.query)+'\t'+str(alignment.title)+'\t'+str((100.0 * hsp.identities) / blast_record.query_letters)+'\t'+str((100.0 * hsp.identities) / alignment.length)+'\t'+str(alignment.length)+'\t'+str(s.split('.')[0])+'\n')
-		    				SeqIO.write(record_dict[blast_record.query], outfile, "fasta")
-
-
-    outfile.close
-    scorefile.close
-
 def makeFilesList(files, filesList):
 	if filesList != "": # take in a text file with the sequence file dir/name
 		file = open(filesList,"r")
@@ -144,8 +59,13 @@ def trimSequences(header, trinityfiles, arguments):
 	stringency = arguments.g
 	for file in trinityfiles:
 		os.makedirs(header + "/" + file) 
-		subprocess.call(['trim_galore --stringency '+stringency+' --length '+arguments.trim+' --dont_gzip --output_dir ' + header + "/" + file + " " +str(file) +".fastq"], shell=True) # trim off sequenceing adapters
-		subprocess.call(['cutadapt -m '+arguments.trim+' -b ATTTAGGTGACACTATAG -b CTATAGTGTCACCTAAAT '+ header + "/"+ file+"/"+str(file)+'_trimmed.fq > '+ header + "/"+file + "/"+str(file)+'_trimmed2.fq'], shell=True) # trim off SP6 sequences (from VSG PCR step)
+		stderr_tg = ""
+		stderr_ca = ""
+		if arguments.stderr == 0 :
+			stderr_tg = " 2> " + header + "/StandardError/trim_galore-"+file+".txt"
+			stderr_ca = " 2> " + header + "/StandardError/cutadapt-"+file+".txt"
+		subprocess.call(['trim_galore --stringency '+stringency+' --length '+arguments.trim+' --dont_gzip --output_dir ' + header + "/" + file + " " +str(file) +".fastq"+stderr_tg], shell=True) # trim off sequenceing adapters
+		subprocess.call(['cutadapt -m '+arguments.trim+' -b ATTTAGGTGACACTATAG -b CTATAGTGTCACCTAAAT '+ header + "/"+ file+"/"+str(file)+'_trimmed.fq > '+ header + "/"+file + "/"+str(file)+'_trimmed2.fq'+stderr_ca], shell=True) # trim off SP6 sequences (from VSG PCR step)
 		subprocess.call(['rm '+ header + "/"+ file+"/"+str(file)+'_trimmed.fq'], shell=True) # removes intermediate trimmed file 
 
 
@@ -153,8 +73,35 @@ def trinity(header, trinityfiles, arguments):
 	max_memory_trinity  =arguments.mem
 	min_pro_len = arguments.minp
 	for file in trinityfiles:
-		subprocess.call(['Trinity --seqType fq --max_memory '+max_memory_trinity+'G --full_cleanup --single ' + header + "/"+ file+"/"+str(file) +'_trimmed2.fq --CPU '+arguments.cpu+' --min_contig_length ' + str(min_pro_len*3) + ' --no_path_merging --no_normalize_reads --output ' + header+"/"+file+"_Trinity/"], shell=True)
+		stderr_tr = ""
+		if arguments.stderr == 0 :
+			stderr_tr = " > " + header + "/StandardError/Trinity-"+file+".txt"
+		subprocess.call(['Trinity --seqType fq --max_memory '+max_memory_trinity+'G --full_cleanup --single ' + header + "/"+ file+"/"+str(file) +'_trimmed2.fq --CPU '+arguments.cpu+' --min_contig_length ' + str(min_pro_len*3) + ' --no_path_merging --no_normalize_reads --output ' + header+"/"+file+"_Trinity/" + stderr_tr], shell=True)
+
+def addSeqRecord(recordRD, start, end, count):
+	sequence = recordRD.seq[start:end]
+	ORF_outfile.write('>'+str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+"_" + filename + '\n'+str(sequence)+'\n')
+	SeqIO.write(SeqRecord(sequence.translate(), id=str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+"_" + filename), trans_out_file, "fasta")
+
+def addSeqRecord_RC(recordRD, start, end, count):
+	sequence = recordRD.seq[start:end].reverse_complement()
+	ORF_outfile.write('>'+str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+'_RC_' + filename +'\n'+str(sequence)+'\n')
+	SeqIO.write(SeqRecord(sequence.translate(), id=str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+'_RC_' + filename), trans_out_file, "fasta")
+
+def fixSeqRecord(file): # gets rid of not usefull stuff in the file comment ">" section 
+	infile = open(file, 'r')
+	outfile = open(str(file.split('.')[0])+'_clean.fa', 'w')
+	for line in infile:
+		if '>' in line:
+			names = line.split()
+			for name in names:
+				if name[0] == '>':
+					outfile.write(name+'\n')	
+		else: 
+			outfile.write(line)
 		
+	outfile.close()
+	infile.close()
 
 def findORFs(header, trinityfiles, arguments):
 	min_pro_len = arguments.minp
@@ -283,6 +230,63 @@ def findORFs(header, trinityfiles, arguments):
 		fixSeqRecord(header + "/"+header+"_"+file+"_orf.fa")
 		fixSeqRecord(header + "/"+header+"_"+file+'_orf_trans.fa')
 
+def blast_sort(v,n,s,Ndb):
+	#v = vsg xml file
+	#n = nonvsg xmlfile
+	#s = sequence file, contigs from blast searches
+	result_handle = open(v)
+	
+	blast_records = NCBIXML.parse(result_handle) # returns an iterator of the blast results
+	record_dict = SeqIO.index(s,"fasta")
+	
+	outfile = open(s.split('.')[0]+'_VSGs.fa', 'w')
+	scorefile = open(s.split('.')[0]+'_VSGs_scores.txt', 'w')
+
+	hit_list = []
+
+	if Ndb == 0: # blasted against nonVSG database
+		nonVSGresult_handle = open(n)
+		blast_records_nonVSG = NCBIXML.parse(nonVSGresult_handle)
+		blast_record_nonVSG = blast_records_nonVSG.next()
+		 # list of VSGs we have found! 
+		exclude_list = []
+				
+		print 'Now looking for non-VSG transcripts...'
+		for blast_record_nonVSG in blast_records_nonVSG:
+			for alignment in blast_record_nonVSG.alignments:
+				for hsp in alignment.hsps: 
+					percent_identity = (100.0 * hsp.identities) / alignment.length # hsp.identities is a tuple(bp matches, total bp in seq) to give percent match of sequence, percent identity is # of bp
+					percent_query_identity = (100.0 * hsp.identities) / blast_record_nonVSG.query_letters
+					#print blast_record_nonVSG.query+'\t'+alignment.title+'\t'+str(percent_identity)+'\t'+str(percent_query_identity)+'\t'
+					if (percent_query_identity > 30 and hsp.identities > 300) or (percent_identity > 90):
+						if not blast_record_nonVSG.query in exclude_list:
+							exclude_list.append(str(blast_record_nonVSG.query))
+							#print 'nonVSG hit!'+'\t'+str(blast_record_nonVSG.query)+' \t '+str(alignment.title)
+
+		print 'VSG hits! - maybe?'
+		for blast_record in blast_records:
+			for alignment in blast_record.alignments:
+				for hsp in alignment.hsps:
+					if hsp.expect < 1.0e-10: # hsp.expect = e value for the hsp value, the lower the e value, the more statistically significant 
+						if not blast_record.query in hit_list: # if this query hasn't already been added to the hit list, add it now
+							if not blast_record.query in exclude_list: # if the query isn't a fake VSG hit, add it now!
+								hit_list.append(str(blast_record.query))											# percent query aligned										# percent identity
+								scorefile.write(str(blast_record.query)+'\t'+str(alignment.title)+'\t'+str((100.0 * hsp.identities) / blast_record.query_letters)+'\t'+str((100.0 * hsp.identities) / alignment.length)+'\t'+str(alignment.length)+'\t'+str(s.split('.')[0])+'\n')
+								SeqIO.write(record_dict[blast_record.query], outfile, "fasta")
+	else: # didn't blast against nonVSG database
+		for blast_record in blast_records:
+			for alignment in blast_record.alignments:
+				for hsp in alignment.hsps:
+					if hsp.expect < 1.0e-10: # hsp.expect = e value for the hsp value, the lower the e value, the more statistically significant 
+						if not blast_record.query in hit_list: # if this query hasn't already been added to the hit list, add it now
+							hit_list.append(str(blast_record.query))											# percent query aligned										# percent identity
+							scorefile.write(str(blast_record.query)+'\t'+str(alignment.title)+'\t'+str((100.0 * hsp.identities) / blast_record.query_letters)+'\t'+str((100.0 * hsp.identities) / alignment.length)+'\t'+str(alignment.length)+'\t'+str(s.split('.')[0])+'\n')
+							SeqIO.write(record_dict[blast_record.query], outfile, "fasta")
+
+
+	outfile.close
+	scorefile.close
+
 def blastCDHIT(header, trinityfiles, arguments):
 	vsgdDbName = arguments.vsgdb
 	seqIdenThresh = arguments.sit
@@ -305,7 +309,10 @@ def blastCDHIT(header, trinityfiles, arguments):
 	for file in trinityfiles:
 		subprocess.call(['cat '+header + "/"+header+"_"+file+"_orf_VSGs.fa >> " +header + "/"+header+"_orf_VSGs.fa"], shell=True) # concatinates all the files for MULTo
 
-	subprocess.call(['cd-hit-est -i '+header+"/"+header+'_orf_VSGs.fa '+' -o '+header+"/"+header+'_orf_VSGs_merged.fa -d 0 -c ' + seqIdenThresh + ' -n 8 -G 1 -g 1 -s 0.0 -aL 0.0 -M '+str(max_memory_trinity )+' -T ' + numCPU], shell=True)
+	stderr_cd = ""
+	if arguments.stderr == 0 :
+		stderr_cd = " > " + header + "/StandardError/cdhitest.txt"
+	subprocess.call(['cd-hit-est -i '+header+"/"+header+'_orf_VSGs.fa '+' -o '+header+"/"+header+'_orf_VSGs_merged.fa -d 0 -c ' + seqIdenThresh + ' -n 8 -G 1 -g 1 -s 0.0 -aL 0.0 -M '+str(max_memory_trinity )+' -T ' + numCPU + stderr_cd], shell=True)
 
 
 
@@ -337,12 +344,12 @@ def makeMulto(header, trinityfiles, arguments):
 		N = 'N'*100
 		concatFA.write('>chr1'+'\n')
 		for record in record_dict:
-		    concatFA.write(str(record_dict[record].seq)+str(N)) # adds lots of N's to the end of the sequence
-		    seqlen = len(record_dict[record].seq)
-		    end = start + seqlen
-		    seqname = record_dict[record].id
-		    BEDfile.write('chr1'+'\t'+str(start)+'\t'+str(end)+'\t'+str(seqname)+'\t 0 \t + \t'+str(start)+'\t'+str(end)+'\n')
-		    start = end + 100          
+			concatFA.write(str(record_dict[record].seq)+str(N)) # adds lots of N's to the end of the sequence
+			seqlen = len(record_dict[record].seq)
+			end = start + seqlen
+			seqname = record_dict[record].id
+			BEDfile.write('chr1'+'\t'+str(start)+'\t'+str(end)+'\t'+str(seqname)+'\t 0 \t + \t'+str(start)+'\t'+str(end)+'\n')
+			start = end + 100          
 		concatFA.close()
 		BEDfile.close()
 		   
@@ -363,8 +370,13 @@ def makeMulto(header, trinityfiles, arguments):
 	# we are taking our quality trimmed and adaptercut sequence file (from step before running trinity)
 	# and we take all these trimmed sequence fragments and align them to the de novo assembled genome
 	for file in trinityfiles:
-		subprocess.call(['bowtie -v '+numMismatch+' -m 1 -p '+numCPU+' -S -a --strata --best '+str(path)+'MULTo1.0/files/tbb/tb'+rmulto+'/bowtie_indexes/tb'+rmulto+'_genome/tb'+rmulto+'_no_random '+header+'/'+ file  +'/'+file  + '_trimmed2.fq '+header + "/" + file+'_align.sam'], shell=True)
-		subprocess.call(['python '+str(path)+'MULTo1.0/src/rpkmforgenes.py -i '+header + "/"+file+'_align.sam -samu -bedann -a '+str(path)+'MULTo1.0/files/tbb/tb'+rmulto+'/fastaFiles/annotationFiles/chr1.bed -u '+str(path)+'MULTo1.0/files/tbb/tb'+rmulto+'/MULfiles/tb'+rmulto+'_20-255/MULTo_files -o '+header + "/"+ file+'_MULTo.txt'], shell=True)
+		stderr_bw = ""
+		stderr_rp = ""
+		if arguments.stderr == 0 :
+			stderr_bw = " 2> " + header + "/StandardError/bowtie-"+file+".txt"
+			stderr_rp = " > " + header + "/StandardError/rpkmforgenes-"+file+".txt"
+		subprocess.call(['bowtie -v '+numMismatch+' -m 1 -p '+numCPU+' -S -a --strata --best '+str(path)+'MULTo1.0/files/tbb/tb'+rmulto+'/bowtie_indexes/tb'+rmulto+'_genome/tb'+rmulto+'_no_random '+header+'/'+ file  +'/'+file  + '_trimmed2.fq '+header + "/" + file+'_align.sam'+stderr_bw], shell=True)
+		subprocess.call(['python '+str(path)+'MULTo1.0/src/rpkmforgenes.py -i '+header + "/"+file+'_align.sam -samu -bedann -a '+str(path)+'MULTo1.0/files/tbb/tb'+rmulto+'/fastaFiles/annotationFiles/chr1.bed -u '+str(path)+'MULTo1.0/files/tbb/tb'+rmulto+'/MULfiles/tb'+rmulto+'_20-255/MULTo_files -o '+header + "/"+ file+'_MULTo.txt' + stderr_rp], shell=True)
 
 
 

@@ -57,15 +57,18 @@ parser.add_argument('-stop', help='the step you want the pipeline to stop at. 1 
 
 arguments = parser.parse_args()
 
-
+header = time.strftime("%Y-%m-%d-%H_%M")  # Year/Month/Day-Hour:Minute , names the folder for output files
+if arguments.d != '':
+	for d in arguments.d:
+		header = header + "-"+ str(d)
+if arguments.stderr == 0:
+	if not os.path.exists(header+"/StandardError"):
+		os.makedirs(header+"/StandardError")
 # start from the very beguinning 
 if arguments.start == 0:
-	header = time.strftime("%Y-%m-%d-%H_%M")  # Year/Month/Day-Hour:Minute , names the folder for output files
-	if arguments.d != '':
-		for d in arguments.d:
-			header = header + "-"+ str(d)
 	if not os.path.exists(header):
 		os.makedirs(header) # creates the folder
+
 	trinityfiles =  vsgf.makeFilesList(arguments.s, arguments.st)
 	vsgf.trimSequences(header, trinityfiles, arguments)
 	if arguments.stop >1:
