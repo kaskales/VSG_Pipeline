@@ -9,33 +9,6 @@ import argparse
 import time
 import os
 
-# parser.add_argument('-s', nargs= '+',metavar='listed sequence files to be put through the pipeline, fq', action="store", dest="s")
-# parser.add_argument('-st',metavar='text file with .fastq names of sequence files to be put through the pipeline, fq', action="store", dest="st", default='')
-# parser.add_argument('-d', help='additional descriptive terms to name your run', action="store", dest='d', default='')
-# parser.add_argument('-stderr', help='0, direct standard error to an output file. 1, output to console', action="store", dest='stderr', default=0)
-# # trimming setting
-# parser.add_argument('-g', metavar='stringency for trim galore', action ="store", dest = "g", default="3") 
-# parser.add_argument('-trim', metavar='minimum length of read for trimming', action ="store", dest = "trim", default="50") 
-# # trinity settings
-# parser.add_argument('-minp', metavar='minimum protein length you are filtering for', action ="store", type=int, dest = "minp", default=300) 
-# parser.add_argument('-mem', metavar='max memory allocation for trinity, G', action ="store", dest = "mem", default="10") 
-# parser.add_argument('-cpu', help='number of processors to use', action="store", dest='cpu', default='2')
-# # Blast settings
-# parser.add_argument('-vsgdb', metavar='name of the vsg database to blast against', action ="store", dest = "vsgdb", default="tb427_vsgs")
-# parser.add_argument('-Ndb', metavar='0 default, blast against NonVSG. >=1 to NOT blast against nonVSG database', action ="store", type=int, dest = "Ndb", default=0)
-# # cd-hit-est parameters
-# parser.add_argument('-sit', metavar='sequence identiy threshold - how much the alignment has to match, percentage. value is 0.0 through 1.0 ', action ="store", dest = "sit", default=".98")
-# parser.add_argument('-t', metavar='number of threads for cd-hit-est to use, 0 default(all CPU will be used)', action ="store", dest = "t", default="0")
-# # MULTO settings
-# parser.add_argument('-p', help='path to MULTo1.0 folder. default is /Users/mugnierlab/, please dont use "~/", python doesnt like this in the path', action="store", dest='p', default='/Users/mugnierlab/') # default assumes MULTo is in your home dir
-# parser.add_argument('-v', help='number of mismatches allowed', action="store", dest='v', default='2')
-# parser.add_argument('-remakeMulto', help='name of the multo files, typically same as header, if default it will make MULTo files. otherwise enter name of multo files to be reused', action="store", dest='rmulto', default='')
-# #where the pipeline will start
-# parser.add_argument('-start', help='the step you want the pipeline to start at. 0 = input is raw untrimmed data. 1 = start after trimming, input is already trimmed. 2 = Start after Trinity, input are trinity files. 3 = start after finding ORF, input are ORFs. 4= Start after BLAST/cd-hit-est, input are VSG/ORFs. 5 = continues till the end to MULTo', type=int, action="store", dest='start', default=0)
-# parser.add_argument('-header', help='input header variable in the format of Y-m-d-H_M , include descriptive headers too ', action="store", dest='head', default='')
-# #where the pipeline will stop
-# parser.add_argument('-stop', help='the step you want the pipeline to stop at. 1 = stop after trimming. 2 = Stop after Trinity. 3= stop after finding ORF. 4= Stop after BLAST, 5 = continues till the end to MULTo', type=int, action="store", dest='stop', default=5)
-
 def makeFilesList(files, filesList):
 	if filesList != "": # take in a text file with the sequence file dir/name
 		file = open(filesList,"r")
@@ -55,7 +28,6 @@ def makeFilesList(files, filesList):
 		trinityfiles.append(filenameS)
 	
 	return trinityfiles
-
 
 def trimSequences(header, trinityfiles, arguments):
 	stringency = arguments.g
@@ -83,27 +55,12 @@ def trinity(header, trinityfiles, arguments):
 def addSeqRecord(recordRD, start, end, count):
 	sequence = recordRD.seq[start:end]
 	ORF_outfile.write('>'+str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+"_" + filename + '\n'+str(sequence)+'\n')
-	SeqIO.write(SeqRecord(sequence.translate(), id=str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+"_" + filename), trans_out_file, "fasta")
+	trans_out_file.write('>'+str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+"_" + filename + '\n'+str(sequence.translate())+'\n')
 
 def addSeqRecord_RC(recordRD, start, end, count):
 	sequence = recordRD.seq[start:end].reverse_complement()
 	ORF_outfile.write('>'+str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+'_RC_' + filename +'\n'+str(sequence)+'\n')
-	SeqIO.write(SeqRecord(sequence.translate(), id=str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+'_RC_' + filename), trans_out_file, "fasta")
-
-def fixSeqRecord(file): # gets rid of not usefull stuff in the file comment ">" section 
-	infile = open(file, 'r')
-	outfile = open(str(file.split('.')[0])+'_clean.fa', 'w')
-	for line in infile:
-		if '>' in line:
-			names = line.split()
-			for name in names:
-				if name[0] == '>':
-					outfile.write(name+'\n')	
-		else: 
-			outfile.write(line)
-		
-	outfile.close()
-	infile.close()
+	trans_out_file.write('>'+str(recordRD.id)+'_'+str(count)+'_'+str(start)+'_'+str(end)+"_RC_" + filename + '\n'+str(sequence.translate())+'\n')
 
 def findORFs(header, trinityfiles, arguments):
 	min_pro_len = arguments.minp
@@ -229,10 +186,8 @@ def findORFs(header, trinityfiles, arguments):
 		ORF_outfile.close()
 		contig_outfile.close()
 		trans_out_file.close()
-		fixSeqRecord(header + "/"+header+"_"+file+"_orf.fa")
-		fixSeqRecord(header + "/"+header+"_"+file+'_orf_trans.fa')
 
-def blast_sort(v,n,s,Ndb):
+def blast_sort(v,n,s,NoNonVSGdb):
 	#v = vsg xml file
 	#n = nonvsg xmlfile
 	#s = sequence file, contigs from blast searches
@@ -246,7 +201,7 @@ def blast_sort(v,n,s,Ndb):
 
 	hit_list = []
 
-	if Ndb == 0: # blasted against nonVSG database
+	if NoNonVSGdb == False: # blasted against nonVSG database
 		nonVSGresult_handle = open(n)
 		blast_records_nonVSG = NCBIXML.parse(nonVSGresult_handle)
 		blast_record_nonVSG = blast_records_nonVSG.next()
@@ -300,10 +255,10 @@ def blastCDHIT(header, trinityfiles, arguments):
 		#blast VSG
 		subprocess.call(['blastn -db '+vsgdDbName+' -query '+filename+'.fa -outfmt 5 -out '+filename+'.xml'], shell=True)
 		#blast nonVSG
-		if arguments.Ndb == 0:
+		if arguments.NoNonVSGdb == False:
 			subprocess.call(['blastn -db NOTvsgs -query '+filename+'.fa -outfmt 5 -out '+filename+'_nonVSG.xml'], shell=True)
 		#get all the blast results which are for ONLY VSGs, get rid of hits which are VSG-similar but not vsgs
-		blast_sort(filename+'.xml', filename+'_nonVSG.xml',filename+".fa", arguments.Ndb) # the _VSGs.fa file is produced from this
+		blast_sort(filename+'.xml', filename+'_nonVSG.xml',filename+".fa", arguments.NoNonVSGdb) # the _VSGs.fa file is produced from this
 		# cdhit merge, clusters VSGs which are similar into one, so that we dont have replicates of VSGs
 
 
